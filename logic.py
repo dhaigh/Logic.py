@@ -1,17 +1,47 @@
 #!/usr/bin/env python2
 
 import re
-T, F = True, False
 
 ########################################
 # Class defs
 
 class Expression:
-    def wrap(self):
-        if isinstance(self, Var) or isinstance(self, Not):
-            return '%s' % self
+    def is_tautology(self):
+        truth = TruthTable(self)
+        values = map(lambda v: v[1], truth.values)
+        return all(values)
 
-        return '(%s)' % self
+    def is_contradiction(self):
+        truth = TruthTable(self)
+        values = map(lambda v: v[1], truth.values)
+        return not any(values)
+
+def wrap(expression):
+    if isinstance(expression, (Unconditional, Var, Not)):
+        return '%s' % expression
+
+    return '(%s)' % expression
+
+## Unconditionals
+
+class Unconditional(Expression):
+    def __init__(self, symbol, value):
+        self.symbol = symbol
+        self.value = value
+
+    def __str__(self):
+        return self.symbol
+
+    def get_names(self):
+        return []
+
+    def evaluate(self, _=None):
+        return self.value
+
+T = Unconditional('T', True)
+F = Unconditional('F', False)
+
+## Variables
 
 class Var(Expression):
     def __init__(self, name):
@@ -20,70 +50,67 @@ class Var(Expression):
     def __str__(self):
         return self.name
 
+    def get_names(self):
+        return [self.name]
+
     def evaluate(self, var_map):
         return var_map[self.name]
 
-# Operators
+## Not operation
 
-class Operator(Expression):
-    def __init__(self, p, q=None):
+class Not(Expression):
+    def __init__(self, p):
         self.p = p
-        self.q = q
+        self.q = None
+
+    def __str__(self):
+        return '~%s' % wrap(self.p)
+
+    def get_names(self):
+        return self.p.get_names()
 
     def evaluate(self, var_map):
         p = self.p.evaluate(var_map)
-
-        if self.q is None:
-            return self.__class__.eval(p)
-
-        q = self.q.evaluate(var_map)
-        return self.__eval__(p, q)
-
-    def get_strs(self):
-        return (self.p.wrap(), self.q.wrap())
-
-class Not(Operator):
-    def __str__(self):
-        return '~%s' % self.p.wrap()
-
-    @staticmethod
-    def eval(p):
         return not p
 
-class And(Operator):
-    def __str__(self):
-        return '%s ^ %s' % self.get_strs()
+## All other operations
 
-    def __eval__(self, p, q):
-        return p and q
+def operator(symbol, rule):
+    class Operation(Expression):
+        def __init__(self, p, q):
+            self.p = p
+            self.q = q
 
-class Or(Operator):
-    def __str__(self):
-        return '%s v %s' % self.get_strs()
+        def __str__(self):
+            p = self.p if isinstance(self.p, Operation) else wrap(self.p)
+            q = self.q if isinstance(self.q, Operation) else wrap(self.q)
 
-    def __eval__(self, p, q):
-        return p or q
+            return '%s %s %s' % (p, symbol, q)
 
-class Xor(Operator):
-    def __str__(self):
-        return '%s xor %s' % self.get_strs()
+        def get_names(self):
+            p_names = self.p.get_names()
+            q_names = self.q.get_names()
+            q_names = filter(lambda n: n not in p_names, q_names)
+            return sorted(p_names + q_names)
 
-    def __eval__(self, p, q):
-        return not p is q
+        def evaluate(self, var_map):
+            p = self.p.evaluate(var_map)
+            q = self.q.evaluate(var_map)
+            return rule(p, q)
 
-class IfThen(Operator):
-    def __str__(self):
-        return '%s -> %s' % self.get_strs()
+    return Operation
 
-    def __eval__(self, p, q):
-        return not p or q
+And           = operator('^',    lambda p, q: p and q)
+Or            = operator('v',    lambda p, q: p or q)
+Xor           = operator('XOR',  lambda p, q: not p is q)
+Nand          = operator('NAND', lambda p, q: not (p and q))
+Nor           = operator('NOR',  lambda p, q: not (p or q))
+Xnor          = operator('XNOR', lambda p, q: p is q)
+Conditional   = operator('->',   lambda p, q: not p or q)
+Biconditional = operator('<->',  lambda p, q: p is q)
 
-class IfAndOnlyIf(Operator):
-    def __str__(self):
-        return '%s <-> %s' % self.get_strs()
 
-    def __eval__(self, p, q):
-        return p is q
+'''
 
 ########################################
 # Parsing
@@ -118,78 +145,99 @@ def nest(tokens):
     print tokz
 
 
-print(tokenize('~(p v q) ^ q'))
-
+#print(tokenize('~(p v q) ^ q'))
+'''
 
 ########################################
 # Truth table
 
-def find_var_names(statement):
-    if statement is None:
-        return []
-
-    if isinstance(statement, Var):
-        return [statement.name]
-
-    var_names = find_var_names(statement.p)
-    var_names.extend(v for v in find_var_names(statement.q) if v not in var_names)
-    return sorted(var_names)
-
-def value_permutations(n_vars):
-    if n_vars == 1:
-        return [[T], [F]]
+def bool_permutations(n):
+    if n == 1:
+        return ((True,), (False,))
 
     perms = []
-    sub_perms = value_permutations(n_vars - 1)
+    sub_perms = bool_permutations(n - 1)
 
-    for value in (T, F):
-        for sub_perm in sub_perms:
-            perms.append([value] + sub_perm)
+    for value in (True, False):
+        for perm in sub_perms:
+            perms.append((value,) + perm)
 
-    return perms
+    return tuple(perms)
 
-def tt_row(cells):
-    cells = map(lambda x: 'T' if x is T else x, cells)
-    cells = map(lambda x: 'F' if x is F else x, cells)
-    print ' | '.join(map(str, cells))
+class TruthTable:
+    def __init__(self, expression):
+        self.expression = expression
+        self.values = []
+        self.build()
 
-def truth_table(statement):
-    if isinstance(statement, str):
-        statement = parse(statement)
+    def __str__(self):
+        def row(cells):
+            cells = map(lambda x: 'FT'[x] if isinstance(x, bool) else x, cells)
+            cells = map(str, cells)
+            return ' | '.join(cells) + '\n'
 
-    var_names = find_var_names(statement)
-    tt_row(var_names + [statement])
+        names = self.expression.get_names()
+        output = row(names + [self.expression])
 
-    for perm in value_permutations(len(var_names)):
-        var_map = dict(zip(var_names, perm))
-        tt_row(perm + [statement.evaluate(var_map)])
+        for perm in bool_permutations(len(names)):
+            var_map = dict(zip(names, perm))
+            value = self.expression.evaluate(var_map)
+            output += row(perm + (value,))
 
-    print
+        return output
 
+    def build(self):
+        names = self.expression.get_names()
+        n_vars = len(names)
+
+        for perm in bool_permutations(n_vars):
+            var_map = dict(zip(names, perm))
+            value = self.expression.evaluate(var_map)
+            self.values.append((perm, value))
+
+########################################
+# Arguments
+
+class Argument:
+    def __init__(self, propositions, implication):
+        self.propositions = propositions
+        self.implication = implication
+
+    def is_valid(self):
+        def join_props(props):
+            if len(props) == 2:
+                return And(props[0], props[1])
+
+            return And(props[0], join_props(props[1:]))
+
+        p = join_props(self.propositions)
+        q = self.implication
+
+        return Conditional(p, q).is_tautology()
 
 ########################################
 # Example usage
 
 p, q, r, s = Var('p'), Var('q'), Var('r'), Var('s')
 
-truth_table(p)
-truth_table(Not(p))
-truth_table(And(p, q))
-truth_table(Or(p, q))
-truth_table(Xor(p, q))
-truth_table(IfThen(p, q))
-truth_table(IfAndOnlyIf(p, q))
-truth_table(IfThen(And(p, Not(r)), IfAndOnlyIf(q, Or(Xor(p, r), IfThen(r, s)))))
+exp1 = Or(Var('x'), Or(Var('y'), Or(T, F)))
+print TruthTable(exp1)
+print exp1.is_tautology()
+
+a = Var('a')
+b = Var('b')
+
+print Argument((Conditional(a, b), a, a, a), b).is_valid()
+
+print
+print
+print TruthTable(And(Not(Var('x')), And(Or(Or(Var('y'), Var('q')), Var('z')), Not(Not(Var('w'))))))
 
 ########################################
 # Todo:
+# - unit tests!!
 # - get parsing working D: (remember: order of ops)
-# - statement class..probably
-# - sexy error messages
-# - improve truth tables..multi-char variables
-# - appropriate bracketing when pretty printing
-# - argument valid/invalid
-# - state whether tautology/contradiction/neither
-# - extra operators, extra symbols
-# - show working steps?..
-# - CLI
+# - show working steps?
+# - CLI + GUI
+# - simplifier
+# - circuit diagram
