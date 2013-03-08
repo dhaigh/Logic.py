@@ -46,11 +46,8 @@ def operator(symbol, rule):
             self.q = q
 
         def __str__(self):
-            p, q = self.get_strs()
+            p, q = self.p.wrap(), self.q.wrap()
             return '%s %s %s' % (p, symbol, q)
-
-        def get_strs(self):
-            return (self.p.wrap(), self.q.wrap())
 
         def evaluate(self, var_map):
             p = self.p.evaluate(var_map)
