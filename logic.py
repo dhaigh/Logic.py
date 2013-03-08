@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
+# -*- coding: utf-8 -*-
 
 import re
-T, F = True, False
 
 ########################################
 # Class defs
@@ -22,6 +22,16 @@ class Var(Expression):
 
     def evaluate(self, var_map):
         return var_map[self.name]
+
+def unconditional(symbol, value):
+    class Unconditional(Var):
+        def evaluate(self, var_map):
+            return value
+
+    return Unconditional(symbol)
+
+T = unconditional('T', True)
+F = unconditional('F', False)
 
 # Base operation class
 
@@ -117,20 +127,20 @@ def find_var_names(statement):
 
 def value_permutations(n_vars):
     if n_vars == 1:
-        return [[T], [F]]
+        return [[True], [False]]
 
     perms = []
     sub_perms = value_permutations(n_vars - 1)
 
-    for value in (T, F):
+    for value in (True, False):
         for sub_perm in sub_perms:
             perms.append([value] + sub_perm)
 
     return perms
 
 def tt_row(cells):
-    cells = map(lambda x: 'T' if x is T else x, cells)
-    cells = map(lambda x: 'F' if x is F else x, cells)
+    cells = map(lambda x: 'T' if x is True else x, cells)
+    cells = map(lambda x: 'F' if x is False else x, cells)
     print ' | '.join(map(str, cells))
 
 def truth_table(statement):
@@ -153,7 +163,7 @@ def truth_table(statement):
 p, q, r, s = Var('p'), Var('q'), Var('r'), Var('s')
 
 truth_table(And(p,q))
-truth_table(Not(p))
+truth_table(Not(T))
 truth_table(Not(And(p, q)))
 truth_table(IfThen(And(p, Not(Not(r))), IfAndOnlyIf(q, Or(Xor(p, r), IfThen(r, s)))))
 
