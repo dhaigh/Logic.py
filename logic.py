@@ -23,38 +23,41 @@ class Var(Expression):
     def evaluate(self, var_map):
         return var_map[self.name]
 
-# Operators
+# Base operation class
 
-class Operation(Expression):
-    def __init__(self, p, q=None):
+# Not operation
+class Not(Expression):
+    def __init__(self, p):
         self.p = p
-        self.q = q
+        self.q = None
 
-    def __str__(self):
-        p, q = self.get_strs()
-        return '%s %s %s' % (p, self.__class__.symbol, q)
-
-    def get_strs(self):
-        return (self.p.wrap(), self.q.wrap())
-
-def operator(_symbol, rule):
-    class O(Operation):
-        symbol = _symbol
-
-        def evaluate(self, var_map):
-            p = self.p.evaluate(var_map)
-            q = self.q.evaluate(var_map)
-            return rule(p, q)
-
-    return O
-
-class Not(Operation):
     def __str__(self):
         return '~%s' % self.p.wrap()
 
     def evaluate(self, var_map):
         p = self.p.evaluate(var_map)
         return not p
+
+# Generates an Operation class
+def operator(symbol, rule):
+    class Operation(Expression):
+        def __init__(self, p, q):
+            self.p = p
+            self.q = q
+
+        def __str__(self):
+            p, q = self.get_strs()
+            return '%s %s %s' % (p, symbol, q)
+
+        def get_strs(self):
+            return (self.p.wrap(), self.q.wrap())
+
+        def evaluate(self, var_map):
+            p = self.p.evaluate(var_map)
+            q = self.q.evaluate(var_map)
+            return rule(p, q)
+
+    return Operation
 
 And         = operator('^',   lambda p, q: p and q)
 Or          = operator('v',   lambda p, q: p or q)
@@ -155,7 +158,7 @@ p, q, r, s = Var('p'), Var('q'), Var('r'), Var('s')
 truth_table(And(p,q))
 truth_table(Not(p))
 truth_table(Not(And(p, q)))
-truth_table(IfThen(And(p, Not(r)), IfAndOnlyIf(q, Or(Xor(p, r), IfThen(r, s)))))
+truth_table(IfThen(And(p, Not(Not(r))), IfAndOnlyIf(q, Or(Xor(p, r), IfThen(r, s)))))
 
 ########################################
 # Todo:
