@@ -25,65 +25,45 @@ class Var(Expression):
 
 # Operators
 
-class Operator(Expression):
+class Operation(Expression):
     def __init__(self, p, q=None):
         self.p = p
         self.q = q
 
-    def evaluate(self, var_map):
-        p = self.p.evaluate(var_map)
-
-        if self.q is None:
-            return self.__class__.eval(p)
-
-        q = self.q.evaluate(var_map)
-        return self.__eval__(p, q)
+    def __str__(self):
+        p, q = self.get_strs()
+        return '%s %s %s' % (p, self.__class__.symbol, q)
 
     def get_strs(self):
         return (self.p.wrap(), self.q.wrap())
 
-class Not(Operator):
+def operator(_symbol, rule):
+    class O(Operation):
+        symbol = _symbol
+
+        def evaluate(self, var_map):
+            p = self.p.evaluate(var_map)
+            q = self.q.evaluate(var_map)
+            return rule(p, q)
+
+    return O
+
+class Not(Operation):
     def __str__(self):
         return '~%s' % self.p.wrap()
 
-    @staticmethod
-    def eval(p):
+    def evaluate(self, var_map):
+        p = self.p.evaluate(var_map)
         return not p
 
-class And(Operator):
-    def __str__(self):
-        return '%s ^ %s' % self.get_strs()
+And         = operator('^',   lambda p, q: p and q)
+Or          = operator('v',   lambda p, q: p or q)
+Xor         = operator('xor', lambda p, q: not p is q)
+IfThen      = operator('->',  lambda p, q: not p or q)
+IfAndOnlyIf = operator('<->', lambda p, q: p is q)
 
-    def __eval__(self, p, q):
-        return p and q
 
-class Or(Operator):
-    def __str__(self):
-        return '%s v %s' % self.get_strs()
-
-    def __eval__(self, p, q):
-        return p or q
-
-class Xor(Operator):
-    def __str__(self):
-        return '%s xor %s' % self.get_strs()
-
-    def __eval__(self, p, q):
-        return not p is q
-
-class IfThen(Operator):
-    def __str__(self):
-        return '%s -> %s' % self.get_strs()
-
-    def __eval__(self, p, q):
-        return not p or q
-
-class IfAndOnlyIf(Operator):
-    def __str__(self):
-        return '%s <-> %s' % self.get_strs()
-
-    def __eval__(self, p, q):
-        return p is q
+'''
 
 ########################################
 # Parsing
@@ -118,8 +98,8 @@ def nest(tokens):
     print tokz
 
 
-print(tokenize('~(p v q) ^ q'))
-
+#print(tokenize('~(p v q) ^ q'))
+'''
 
 ########################################
 # Truth table
@@ -172,13 +152,9 @@ def truth_table(statement):
 
 p, q, r, s = Var('p'), Var('q'), Var('r'), Var('s')
 
-truth_table(p)
+truth_table(And(p,q))
 truth_table(Not(p))
-truth_table(And(p, q))
-truth_table(Or(p, q))
-truth_table(Xor(p, q))
-truth_table(IfThen(p, q))
-truth_table(IfAndOnlyIf(p, q))
+truth_table(Not(And(p, q)))
 truth_table(IfThen(And(p, Not(r)), IfAndOnlyIf(q, Or(Xor(p, r), IfThen(r, s)))))
 
 ########################################
