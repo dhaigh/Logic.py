@@ -23,15 +23,19 @@ class Var(Expression):
     def evaluate(self, var_map):
         return var_map[self.name]
 
-def unconditional(symbol, value):
-    class Unconditional(Var):
-        def evaluate(self, var_map):
-            return value
+class Unconditional(Expression):
+    def __init__(self, symbol, value):
+        self.symbol = symbol
+        self.value = value
 
-    return Unconditional(symbol)
+    def __str__(self):
+        return self.symbol
 
-T = unconditional('T', True)
-F = unconditional('F', False)
+    def evaluate(self, var_map):
+        return self.value
+
+T = Unconditional('T', True)
+F = Unconditional('F', False)
 
 # Base operation class
 
@@ -66,11 +70,13 @@ def operator(symbol, rule):
 
     return Operation
 
-And         = operator('^',   lambda p, q: p and q)
-Or          = operator('v',   lambda p, q: p or q)
-Xor         = operator('xor', lambda p, q: not p is q)
-IfThen      = operator('->',  lambda p, q: not p or q)
-IfAndOnlyIf = operator('<->', lambda p, q: p is q)
+And         = operator('^',    lambda p, q: p and q)
+Or          = operator('v',    lambda p, q: p or q)
+Xor         = operator('xor',  lambda p, q: not p is q)
+Nand        = operator('nand', lambda p, q: not p or not q)
+Nor         = operator('nor',  lambda p, q: not p and not q)
+IfThen      = operator('->',   lambda p, q: not p or q)
+IfAndOnlyIf = operator('<->',  lambda p, q: p is q)
 
 
 '''
@@ -115,7 +121,7 @@ def nest(tokens):
 # Truth table
 
 def find_var_names(statement):
-    if statement is None:
+    if statement is None or isinstance(statement, Unconditional):
         return []
 
     if isinstance(statement, Var):
@@ -128,6 +134,9 @@ def find_var_names(statement):
 def value_permutations(n_vars):
     if n_vars == 1:
         return [[True], [False]]
+
+    if n_vars == 0:
+        return []
 
     perms = []
     sub_perms = value_permutations(n_vars - 1)
@@ -148,9 +157,10 @@ def truth_table(statement):
         statement = parse(statement)
 
     var_names = find_var_names(statement)
-    tt_row(var_names + [statement])
+    n_vars = len(var_names)
 
-    for perm in value_permutations(len(var_names)):
+    tt_row(var_names + [statement])
+    for perm in value_permutations(n_vars):
         var_map = dict(zip(var_names, perm))
         tt_row(perm + [statement.evaluate(var_map)])
 
@@ -162,9 +172,11 @@ def truth_table(statement):
 
 p, q, r, s = Var('p'), Var('q'), Var('r'), Var('s')
 
-truth_table(And(p,q))
-truth_table(Not(T))
+truth_table(And(p, T))
 truth_table(Not(And(p, q)))
+truth_table(Xor(p, q))
+truth_table(Nand(p, q))
+truth_table(Nor(p, q))
 truth_table(IfThen(And(p, Not(Not(r))), IfAndOnlyIf(q, Or(Xor(p, r), IfThen(r, s)))))
 
 ########################################
