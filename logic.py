@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 
 import re
 
@@ -16,13 +16,7 @@ class Expression:
         values = map(lambda v: v[1], truth.values)
         return not any(values)
 
-def wrap(expression):
-    if isinstance(expression, (Unconditional, Var, Not)):
-        return '%s' % expression
 
-    return '(%s)' % expression
-
-## Unconditionals
 
 class Unconditional(Expression):
     def __init__(self, symbol, value):
@@ -41,7 +35,7 @@ class Unconditional(Expression):
 T = Unconditional('T', True)
 F = Unconditional('F', False)
 
-## Variables
+
 
 class Var(Expression):
     def __init__(self, name):
@@ -56,7 +50,12 @@ class Var(Expression):
     def evaluate(self, var_map):
         return var_map[self.name]
 
-## Not operation
+
+
+def wrap(expression):
+    if isinstance(expression, (Unconditional, Var, Not)):
+        return '%s' % expression
+    return '(%s)' % expression
 
 class Not(Expression):
     def __init__(self, p):
@@ -73,8 +72,6 @@ class Not(Expression):
         p = self.p.evaluate(var_map)
         return not p
 
-## All other operations
-
 def operator(symbol, rule):
     class Operation(Expression):
         def __init__(self, p, q):
@@ -84,7 +81,6 @@ def operator(symbol, rule):
         def __str__(self):
             p = self.p if isinstance(self.p, Operation) else wrap(self.p)
             q = self.q if isinstance(self.q, Operation) else wrap(self.q)
-
             return '%s %s %s' % (p, symbol, q)
 
         def get_names(self):
@@ -100,14 +96,13 @@ def operator(symbol, rule):
 
     return Operation
 
-And           = operator('^',    lambda p, q: p and q)
-Or            = operator('v',    lambda p, q: p or q)
-Xor           = operator('XOR',  lambda p, q: not p is q)
-Nand          = operator('NAND', lambda p, q: not (p and q))
-Nor           = operator('NOR',  lambda p, q: not (p or q))
-Xnor          = operator('XNOR', lambda p, q: p is q)
-Conditional   = operator('->',   lambda p, q: not p or q)
-Biconditional = operator('<->',  lambda p, q: p is q)
+And = operator('^', lambda p, q: p and q)
+Or = operator('v', lambda p, q: p or q)
+Xor = operator('XOR', lambda p, q: not p is q)
+Nand = operator('|', lambda p, q: not (p and q))
+Nor = operator('NOR', lambda p, q: not (p or q))
+Conditional = operator('->', lambda p, q: not p or q)
+Biconditional = operator('<->', lambda p, q: p is q)
 
 
 '''
@@ -218,24 +213,27 @@ class Argument:
 ########################################
 # Example usage
 
-p, q, r, s = Var('p'), Var('q'), Var('r'), Var('s')
+def main():
+    p, q, r, s = Var('p'), Var('q'), Var('r'), Var('s')
 
-exp1 = Or(Var('x'), Or(Var('y'), Or(T, F)))
-print TruthTable(exp1)
-print exp1.is_tautology()
+    exp1 = Or(Var('x'), Or(Var('y'), Or(T, F)))
+    print TruthTable(exp1)
+    print exp1.is_tautology()
 
-a = Var('a')
-b = Var('b')
+    a = Var('a')
+    b = Var('b')
 
-print Argument((Conditional(a, b), a, a, a), b).is_valid()
+    print Argument((Conditional(a, b), a, a, a), b).is_valid()
 
-print
-print
-print TruthTable(And(Not(Var('x')), And(Or(Or(Var('y'), Var('q')), Var('z')), Not(Not(Var('w'))))))
+    print
+    print
+    print TruthTable(And(Not(Var('x')), And(Or(Or(Var('y'), Var('q')), Var('z')), Not(Not(Var('w'))))))
+
+if __name__ == '__main__':
+    main()
 
 ########################################
 # Todo:
-# - unit tests!!
 # - get parsing working D: (remember: order of ops)
 # - show working steps?
 # - CLI + GUI
