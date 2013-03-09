@@ -118,8 +118,8 @@ class TestExpressions(unittest2.TestCase):
                     p),
                   p)),
                 '((((((p <-> p) -> p) NOR p) | p) XOR p) v p) ^ p')
-        self.assertEquals(str(And(p, And(q, And(r, Nor(p, Nor(q, r)))))),
-                'p ^ q ^ r ^ (p NOR q NOR r)')
+        self.assertEquals(str(And(p, And(q, And(r, And(Nor(p, Nor(q, r)), Not(q)))))),
+                'p ^ q ^ r ^ (p NOR q NOR r) ^ ~q')
 
     # TBC.
 
