@@ -198,13 +198,13 @@ class Argument:
         self.implication = implication
 
     def is_valid(self):
-        def join_props(props):
+        def and_props(props):
             if len(props) == 1:
                 return props[0]
 
-            return And(props[0], join_props(props[1:]))
+            return And(props[0], and_props(props[1:]))
 
-        p = join_props(self.propositions)
+        p = and_props(self.propositions)
         q = self.implication
 
         return Conditional(p, q).is_tautology()
