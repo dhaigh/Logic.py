@@ -7,13 +7,13 @@ import re
 
 class Expression:
     def is_tautology(self):
-        truth = TruthTable(self)
-        values = map(lambda v: v[1], truth.values)
+        rows = TruthTable(self).rows
+        values = map(lambda v: v[1], rows)
         return all(values)
 
     def is_contradiction(self):
-        truth = TruthTable(self)
-        values = map(lambda v: v[1], truth.values)
+        rows = TruthTable(self).rows
+        values = map(lambda v: v[1], rows)
         return not any(values)
 
 
@@ -52,7 +52,7 @@ class Var(Expression):
 
 
 
-def wrap(expression):
+def _wrap(expression):
     if isinstance(expression, (Unconditional, Var, Not)):
         return '%s' % expression
     return '(%s)' % expression
@@ -63,7 +63,7 @@ class Not(Expression):
         self.q = None
 
     def __str__(self):
-        return '~%s' % wrap(self.p)
+        return '~%s' % _wrap(self.p)
 
     def get_names(self):
         return self.p.get_names()
@@ -79,8 +79,8 @@ def operator(symbol, rule):
             self.q = q
 
         def __str__(self):
-            p = self.p if isinstance(self.p, Operation) else wrap(self.p)
-            q = self.q if isinstance(self.q, Operation) else wrap(self.q)
+            p = self.p if isinstance(self.p, Operation) else _wrap(self.p)
+            q = self.q if isinstance(self.q, Operation) else _wrap(self.q)
             return '%s %s %s' % (p, symbol, q)
 
         def get_names(self):
@@ -104,13 +104,11 @@ Nor = operator('NOR', lambda p, q: not (p or q))
 Conditional = operator('->', lambda p, q: not p or q)
 Biconditional = operator('<->', lambda p, q: p is q)
 
-
-'''
-
 ########################################
 # Parsing
 # ...ugh
 
+'''
 LEXER = re.compile(r'[a-z]+|[~\^()]|->|<->|(?<= )(?:v|xor)(?= )')
 
 def tokenize(statement):
@@ -146,38 +144,36 @@ def nest(tokens):
 ########################################
 # Truth table
 
-def bool_permutations(n):
+def _bool_permutations(n):
     if n == 1:
-        return ((True,), (False,))
+        return [[True], [False]]
 
     perms = []
-    sub_perms = bool_permutations(n - 1)
+    sub_perms = _bool_permutations(n - 1)
 
     for value in (True, False):
         for perm in sub_perms:
-            perms.append((value,) + perm)
+            perms.append([value] + perm)
 
-    return tuple(perms)
+    return perms
 
 class TruthTable:
     def __init__(self, expression):
         self.expression = expression
-        self.values = []
+        self.rows = []
         self.build()
 
     def __str__(self):
-        def row(cells):
+        def row_str(cells):
             cells = map(lambda x: 'FT'[x] if isinstance(x, bool) else x, cells)
             cells = map(str, cells)
             return ' | '.join(cells) + '\n'
 
         names = self.expression.get_names()
-        output = row(names + [self.expression])
+        rows = map(lambda r: r[0] + [r[1]], self.rows)
 
-        for perm in bool_permutations(len(names)):
-            var_map = dict(zip(names, perm))
-            value = self.expression.evaluate(var_map)
-            output += row(perm + (value,))
+        output = row_str(names + [self.expression])
+        output += ''.join(map(row_str, rows))
 
         return output
 
@@ -185,10 +181,10 @@ class TruthTable:
         names = self.expression.get_names()
         n_vars = len(names)
 
-        for perm in bool_permutations(n_vars):
+        for perm in _bool_permutations(n_vars):
             var_map = dict(zip(names, perm))
             value = self.expression.evaluate(var_map)
-            self.values.append((perm, value))
+            self.rows.append((perm, value))
 
 ########################################
 # Arguments
@@ -213,7 +209,7 @@ class Argument:
 ########################################
 # Example usage
 
-def main():
+def _main():
     p, q, r, s = Var('p'), Var('q'), Var('r'), Var('s')
 
     exp1 = Or(Var('x'), Or(Var('y'), Or(T, F)))
@@ -230,7 +226,7 @@ def main():
     print TruthTable(And(Not(Var('x')), And(Or(Or(Var('y'), Var('q')), Var('z')), Not(Not(Var('w'))))))
 
 if __name__ == '__main__':
-    main()
+    _main()
 
 ########################################
 # Todo:
