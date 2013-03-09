@@ -148,6 +148,9 @@ def _bool_permutations(n):
     if n == 1:
         return [[True], [False]]
 
+    if n <= 0:
+        return [[]]
+
     perms = []
     sub_perms = _bool_permutations(n - 1)
 
@@ -196,8 +199,8 @@ class Argument:
 
     def is_valid(self):
         def join_props(props):
-            if len(props) == 2:
-                return And(props[0], props[1])
+            if len(props) == 1:
+                return props[0]
 
             return And(props[0], join_props(props[1:]))
 

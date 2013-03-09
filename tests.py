@@ -32,6 +32,15 @@ def test_operation(t, class_, symbol):
     t.assertEquals(Xpq.get_names(), ['p', 'q'])
 
 class TestExpressions(unittest2.TestCase):
+    def test_tautology(self):
+        self.assertTrue(Conditional(And(Conditional(p, q), p), p).is_tautology())
+        self.assertTrue(Or(p, Np).is_tautology())
+        self.assertTrue(T.is_tautology())
+
+    def test_contradiction(self):
+        self.assertTrue(And(p, Np).is_contradiction())
+        self.assertTrue(F.is_contradiction())
+
     def test_unconditionals(self):
         self.assertTrue(T.evaluate())
         self.assertFalse(F.evaluate())
@@ -122,6 +131,55 @@ class TestExpressions(unittest2.TestCase):
                 'p ^ q ^ r ^ (p NOR q NOR r) ^ ~q')
 
     # TBC.
+
+tt_p = TruthTable(p)
+tt_Apq = TruthTable(Apq)
+tt_Apqr = TruthTable(And(Apq, r))
+
+class TestTruthTable(unittest2.TestCase):
+    def test_init(self):
+        self.assertIs(tt_p.expression, p)
+        self.assertIs(tt_Apq.expression, Apq)
+
+    def test_values(self):
+        self.assertEquals(tt_p.rows, [([True], True), ([False], False)])
+        self.assertEquals(tt_Apq.rows, [
+            ([True, True], True),
+            ([True, False], False),
+            ([False, True], False),
+            ([False, False], False)
+        ])
+        self.assertEquals(tt_Apqr.rows, [
+            ([True, True, True], True),
+            ([True, True, False], False),
+            ([True, False, True], False),
+            ([True, False, False], False),
+            ([False, True, True], False),
+            ([False, True, False], False),
+            ([False, False, True], False),
+            ([False, False, False], False)
+        ])
+        self.assertEquals(TruthTable(T).rows, [([], True)])
+        self.assertEquals(TruthTable(F).rows, [([], False)])
+
+    def test_str(self):
+        pass
+
+
+class TestArguments(unittest2.TestCase):
+    def test_init(self):
+        arg = Argument([p, q, r], r)
+        self.assertEquals(arg.propositions, [p, q, r])
+        self.assertIs(arg.implication, r)
+
+    def test_validation(self):
+        arg1 = Argument([p, q], p)
+        arg2 = Argument([p, q, Conditional(Apq, r)], r)
+        self.assertIs(arg1.is_valid(), True)
+        self.assertIs(arg2.is_valid(), True)
+        arg3 = Argument([p], q)
+        self.assertIs(arg3.is_valid(), False)
+
 
 if __name__ == '__main__':
     unittest2.main()
