@@ -1,11 +1,13 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
-import re
-
-########################################
-# Class defs
 
 class Expression:
+    def get_names(self):
+        raise NotImplementedError
+
+    def evaluate(self, var_map):
+        raise NotImplementedError
+
     def is_tautology(self):
         rows = TruthTable(self).rows
         values = map(lambda v: v[1], rows)
@@ -15,7 +17,6 @@ class Expression:
         rows = TruthTable(self).rows
         values = map(lambda v: v[1], rows)
         return not any(values)
-
 
 
 class Unconditional(Expression):
@@ -36,7 +37,6 @@ T = Unconditional('T', True)
 F = Unconditional('F', False)
 
 
-
 class Var(Expression):
     def __init__(self, name):
         self.name = name
@@ -51,16 +51,15 @@ class Var(Expression):
         return var_map[self.name]
 
 
-
 def _wrap(expression):
     if isinstance(expression, (Unconditional, Var, Not)):
         return '%s' % expression
     return '(%s)' % expression
 
+
 class Not(Expression):
     def __init__(self, p):
         self.p = p
-        self.q = None
 
     def __str__(self):
         return '~%s' % _wrap(self.p)
@@ -72,8 +71,10 @@ class Not(Expression):
         p = self.p.evaluate(var_map)
         return not p
 
+
 def operator(symbol, rule):
     class Operation(Expression):
+
         def __init__(self, p, q):
             self.p = p
             self.q = q
@@ -144,6 +145,7 @@ def nest(tokens):
 ########################################
 # Truth table
 
+
 def _bool_permutations(n):
     if n == 1:
         return [[True], [False]]
@@ -160,7 +162,9 @@ def _bool_permutations(n):
 
     return perms
 
+
 class TruthTable:
+
     def __init__(self, expression):
         self.expression = expression
         self.rows = []
@@ -174,7 +178,6 @@ class TruthTable:
 
         names = self.expression.get_names()
         rows = map(lambda r: r[0] + [r[1]], self.rows)
-
         output = row_str(names + [self.expression])
         output += ''.join(map(row_str, rows))
 
@@ -192,7 +195,9 @@ class TruthTable:
 ########################################
 # Arguments
 
+
 class Argument:
+
     def __init__(self, propositions, implication):
         self.propositions = propositions
         self.implication = implication
@@ -201,7 +206,6 @@ class Argument:
         def and_props(props):
             if len(props) == 1:
                 return props[0]
-
             return And(props[0], and_props(props[1:]))
 
         p = and_props(self.propositions)
@@ -211,6 +215,7 @@ class Argument:
 
 ########################################
 # Example usage
+
 
 def _main():
     p, q, r, s = Var('p'), Var('q'), Var('r'), Var('s')
@@ -223,10 +228,6 @@ def _main():
     b = Var('b')
 
     print Argument((Conditional(a, b), a, a, a), b).is_valid()
-
-    print
-    print
-    print TruthTable(And(Not(Var('x')), And(Or(Or(Var('y'), Var('q')), Var('z')), Not(Not(Var('w'))))))
 
 if __name__ == '__main__':
     _main()
