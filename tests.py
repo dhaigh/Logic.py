@@ -19,7 +19,8 @@ tf = {'p': True, 'q': False}
 ft = {'p': False, 'q': True}
 ff = {'p': False, 'q': False}
 
-def test_operation(t, class_, symbol):
+def test_operation(t, class_):
+    symbol = class_.symbol
     Xpq = class_(p, q)
     Xpqr = class_(Xpq, r)
     Xrpq = class_(r, Xpq)
@@ -52,6 +53,7 @@ class TestExpressions(unittest2.TestCase):
         self.assertEquals(p.evaluate({'p': False}), False)
 
     def test_not(self):
+        symbol = Not.symbol
         self.assertIs(Np.p, p)
         self.assertEquals(str(Np), '~p')
         self.assertEquals(str(Not(Np)), '~~p')
@@ -59,49 +61,49 @@ class TestExpressions(unittest2.TestCase):
         self.assertEquals(Np.evaluate({'p': True}), False)
 
     def test_and(self):
-        test_operation(self, And, '^')
+        test_operation(self, And)
         self.assertEquals(Apq.evaluate(tt), True)
         self.assertEquals(Apq.evaluate(tf), False)
         self.assertEquals(Apq.evaluate(ft), False)
         self.assertEquals(Apq.evaluate(ff), False)
 
     def test_or(self):
-        test_operation(self, Or, 'v')
+        test_operation(self, Or)
         self.assertEquals(Opq.evaluate(tt), True)
         self.assertEquals(Opq.evaluate(tf), True)
         self.assertEquals(Opq.evaluate(ft), True)
         self.assertEquals(Opq.evaluate(ff), False)
 
     def test_xor(self):
-        test_operation(self, Xor, 'XOR')
+        test_operation(self, Xor)
         self.assertEquals(Jpq.evaluate(tt), False)
         self.assertEquals(Jpq.evaluate(tf), True)
         self.assertEquals(Jpq.evaluate(ft), True)
         self.assertEquals(Jpq.evaluate(ff), False)
 
     def test_nand(self):
-        test_operation(self, Nand, '|')
+        test_operation(self, Nand)
         self.assertEquals(Dpq.evaluate(tt), False)
         self.assertEquals(Dpq.evaluate(tf), True)
         self.assertEquals(Dpq.evaluate(ft), True)
         self.assertEquals(Dpq.evaluate(ff), True)
 
     def test_nor(self):
-        test_operation(self, Nor, 'NOR')
+        test_operation(self, Nor)
         self.assertEquals(Xpq.evaluate(tt), False)
         self.assertEquals(Xpq.evaluate(tf), False)
         self.assertEquals(Xpq.evaluate(ft), False)
         self.assertEquals(Xpq.evaluate(ff), True)
 
     def test_conditional(self):
-        test_operation(self, Conditional, '->')
+        test_operation(self, Conditional)
         self.assertEquals(Cpq.evaluate(tt), True)
         self.assertEquals(Cpq.evaluate(tf), False)
         self.assertEquals(Cpq.evaluate(ft), True)
         self.assertEquals(Cpq.evaluate(ff), True)
 
     def test_biconditional(self):
-        test_operation(self, Biconditional, '<->')
+        test_operation(self, Biconditional)
         self.assertEquals(Epq.evaluate(tt), True)
         self.assertEquals(Epq.evaluate(tf), False)
         self.assertEquals(Epq.evaluate(ft), False)
@@ -130,8 +132,6 @@ class TestExpressions(unittest2.TestCase):
         self.assertEquals(str(And(p, And(q, And(r, And(Nor(p, Nor(q, r)), Not(q)))))),
                 'p ^ q ^ r ^ (p NOR q NOR r) ^ ~q')
 
-    # TBC.
-
 tt_p = TruthTable(p)
 tt_Apq = TruthTable(Apq)
 tt_Apqr = TruthTable(And(Apq, r))
@@ -142,25 +142,26 @@ class TestTruthTable(unittest2.TestCase):
         self.assertIs(tt_Apq.expression, Apq)
 
     def test_values(self):
-        self.assertEquals(tt_p.rows, [([True], True), ([False], False)])
+        t, f = True, False
+        self.assertEquals(tt_p.rows, [([t], t), ([f], f)])
         self.assertEquals(tt_Apq.rows, [
-            ([True, True], True),
-            ([True, False], False),
-            ([False, True], False),
-            ([False, False], False)
+            ([t,t], t),
+            ([t,f], f),
+            ([f,t], f),
+            ([f,f], f)
         ])
         self.assertEquals(tt_Apqr.rows, [
-            ([True, True, True], True),
-            ([True, True, False], False),
-            ([True, False, True], False),
-            ([True, False, False], False),
-            ([False, True, True], False),
-            ([False, True, False], False),
-            ([False, False, True], False),
-            ([False, False, False], False)
+            ([t,t,t], t),
+            ([t,t,f], f),
+            ([t,f,t], f),
+            ([t,f,f], f),
+            ([f,t,t], f),
+            ([f,t,f], f),
+            ([f,f,t], f),
+            ([f,f,f], f)
         ])
-        self.assertEquals(TruthTable(T).rows, [([], True)])
-        self.assertEquals(TruthTable(F).rows, [([], False)])
+        self.assertEquals(TruthTable(T).rows, [([], t)])
+        self.assertEquals(TruthTable(F).rows, [([], f)])
 
     def test_str(self):
         pass
