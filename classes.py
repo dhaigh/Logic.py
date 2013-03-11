@@ -3,7 +3,8 @@
 # =============================================================================
 
 class NotEnoughTermsError(Exception):
-    pass
+    def __str__(self):
+        return 'an operation needs at least 2 terms'
 
 class Expression:
     def get_names(self):
@@ -126,8 +127,11 @@ Conditional.order = Biconditional.order = 3
 
 def get_operation(symbol):
     operations = {
-        '^': And, 'v': Or, 'XOR': Xor,
-        '|': Nand, 'NOR': Nor,
+        '^': And,
+        'v': Or,
+        'XOR': Xor,
+        '|': Nand,
+        'NOR': Nor,
         '->': Conditional,
         '<->': Biconditional
     }

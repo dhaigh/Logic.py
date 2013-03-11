@@ -1,9 +1,9 @@
 from classes import *
 import re
 
-lexer_re = re.compile(r'[a-z]+|[~\^()\|]|->|<->|(?<= )(?:v|xor|nor)(?= )')
+lexer_re = re.compile(r'[a-zA-Z]+|[~\^()\|]|->|<->')
 variable_re = re.compile(r'[a-zA-Z]+')
-op_re = re.compile(r'\^|v|XOR|\||NOR|->|<->')
+op_re = re.compile(r'\^|v|XOR|\||NOR|->|<->', re.I)
 
 def tokenize(statement):
     return lexer_re.findall(statement)
@@ -26,7 +26,7 @@ class UnexpectedTokenError(Exception):
         self.saw = saw
 
     def __str__(self):
-        return 'expected %s saw `%s`' % (self.expected, self.saw)
+        return 'expected %s, saw %s' % (self.expected, self.saw)
 
 def parse(tokens):
     def read(token_type=None):
@@ -45,13 +45,15 @@ def parse(tokens):
         return tokens[0]
 
     def expect(token_type, token):
-        if token is None:
-            return
         if token_type == OPERATION:
+            if token is None:
+                raise UnexpectedTokenError('an operation', 'nothing (end of expression)')
             if not isop(token):
                 raise UnexpectedTokenError('an operation', token)
         elif token_type == VAR:
-            if not isvar(token):
+            if token is None:
+                raise UnexpectedTokenError('a variable', 'nothing (end of expression)')
+            if token is None or not isvar(token):
                 raise UnexpectedTokenError('a variable', token)
 
     terms = []
@@ -73,6 +75,6 @@ def parse(tokens):
         new_op_symbol = read(OPERATION)
         if op_symbol and op_symbol != new_op_symbol:
             terms = [get_operation(op_symbol)(*terms)]
-            op_symbol = new_op_symbol
+        op_symbol = new_op_symbol
 
     return get_operation(op_symbol)(*terms)
