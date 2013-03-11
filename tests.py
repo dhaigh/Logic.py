@@ -20,13 +20,20 @@ ft = {'p': False, 'q': True}
 ff = {'p': False, 'q': False}
 
 def test_operation(t, class_):
+    try:
+        class_(p)
+    except(NotEnoughTermsError):
+        pass
+    else:
+        t.fail('NotEnoughTermsError not thrown')
+
     symbol = class_.symbol
     Xpq = class_(p, q)
     Xpqr = class_(Xpq, r)
     Xrpq = class_(r, Xpq)
 
-    t.assertIs(Xpq.p, p)
-    t.assertIs(Xpq.q, q)
+    t.assertIs(Xpq[0], p)
+    t.assertIs(Xpq[1], q)
     t.assertEquals(str(Xpq), 'p %s q' % symbol)
     t.assertEquals(str(Xpqr), 'p %s q %s r' % (symbol, symbol))
     t.assertEquals(str(Xrpq), 'r %s p %s q' % (symbol, symbol))
@@ -54,7 +61,7 @@ class TestExpressions(unittest2.TestCase):
 
     def test_not(self):
         symbol = Not.symbol
-        self.assertIs(Np.p, p)
+        self.assertIs(Np.term, p)
         self.assertEquals(str(Np), '~p')
         self.assertEquals(str(Not(Np)), '~~p')
         self.assertEquals(Np.get_names(), ['p'])
@@ -180,7 +187,6 @@ class TestArguments(unittest2.TestCase):
         self.assertIs(arg2.is_valid(), True)
         arg3 = Argument([p], q)
         self.assertIs(arg3.is_valid(), False)
-
 
 if __name__ == '__main__':
     unittest2.main()

@@ -2,6 +2,9 @@
 # Expressions
 # =============================================================================
 
+class NotEnoughTermsError(Exception):
+    pass
+
 class Expression:
     def get_names(self):
         raise NotImplementedError
@@ -49,47 +52,61 @@ class Var(Expression):
     def evaluate(self, var_map):
         return var_map[self.name]
 
-def _wrap(expression):
-    if isinstance(expression, (Unconditional, Var, Not)):
+def _wrap(expression, operation=()):
+    dont_wrap = (Unconditional, Var, Not) + (operation,)
+    if isinstance(expression, dont_wrap):
         return '%s' % expression
     return '(%s)' % expression
 
 class Not(Expression):
-    def __init__(self, p):
-        self.p = p
+    def __init__(self, term):
+        self.term = term
 
     def __str__(self):
-        return '~%s' % _wrap(self.p)
+        return '~%s' % _wrap(self.term)
 
     def get_names(self):
-        return self.p.get_names()
+        return self.term.get_names()
 
     def evaluate(self, var_map):
-        p = self.p.evaluate(var_map)
-        return not p
+        term = self.term.evaluate(var_map)
+        return not term
 
     symbol = '~'
 
 def operator(symbol, rule):
     class Operation(Expression):
-        def __init__(self, p, q):
-            self.p = p
-            self.q = q
+        def __init__(self, *terms):
+            self.terms = terms
+            if len(terms) < 2:
+                raise NotEnoughTermsError
 
         def __str__(self):
-            p = self.p if isinstance(self.p, Operation) else _wrap(self.p)
-            q = self.q if isinstance(self.q, Operation) else _wrap(self.q)
-            return '%s %s %s' % (p, symbol, q)
+            wrap = lambda term: _wrap(term, Operation)
+            terms = map(wrap, self.terms)
+            return (' %s ' % symbol).join(terms)
+
+        def __getitem__(self, index):
+            return self.terms[index]
 
         def get_names(self):
-            p_names = self.p.get_names()
-            q_names = self.q.get_names()
-            q_names = filter(lambda n: n not in p_names, q_names)
-            return sorted(p_names + q_names)
+            names = []
+            for term in self.terms:
+                for name in term.get_names():
+                    if name not in names:
+                        names.append(name)
+            return sorted(names)
 
         def evaluate(self, var_map):
-            p = self.p.evaluate(var_map)
-            q = self.q.evaluate(var_map)
+            terms = self.terms
+            p = terms[0]
+            if len(terms) == 2:
+                q = terms[1]
+            else:
+                q = Operation(*terms[1:])
+
+            p = p.evaluate(var_map)
+            q = q.evaluate(var_map)
             return rule(p, q)
 
     Operation.symbol = symbol
@@ -103,6 +120,18 @@ Nor = operator('NOR', lambda p, q: not (p or q))
 Conditional = operator('->', lambda p, q: not p or q)
 Biconditional = operator('<->', lambda p, q: p is q)
 
+Not.order = 1
+And.order = Or.order = Xor.order = Nand.order = Nor.order = 2
+Conditional.order = Biconditional.order = 3
+
+def get_operation(symbol):
+    operations = {
+        '^': And, 'v': Or, 'XOR': Xor,
+        '|': Nand, 'NOR': Nor,
+        '->': Conditional,
+        '<->': Biconditional
+    }
+    return operations[symbol]
 
 # =============================================================================
 # Truth table
@@ -160,20 +189,18 @@ class Argument:
         self.implication = implication
 
     def is_valid(self):
-        def and_props(props):
-            if len(props) == 1:
-                return props[0]
-            return And(props[0], and_props(props[1:]))
-
-        p = and_props(self.propositions)
+        if len(self.propositions) == 1:
+            p = self.propositions[0]
+        else:
+            p = And(*self.propositions)
         q = self.implication
-
         return Conditional(p, q).is_tautology()
 
 
 # =============================================================================
 # Todo:
 # - get parsing working D: (remember: order of ops)
+# - multiple symbols for same operation
 # - show working steps?
 # - CLI + GUI
 # - simplifier

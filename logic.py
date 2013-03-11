@@ -2,5 +2,8 @@
 
 from parser import *
 
-print parsey('~a ^ (a ^ (c ^ d))')
+def main():
+    pass
 
+if __name__ == '__main__':
+    main()
