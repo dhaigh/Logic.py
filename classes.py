@@ -78,10 +78,10 @@ def operator(symbol, rule, two_terms=False):
     class Operation(Expression):
         def __init__(self, *terms):
             self.terms = terms
-            if len(terms) < 2:
-                raise TermError('Not enough terms (must be at least 2)')
             if two_terms and len(terms) != 2:
-                raise TermError('Too many terms (must be exactly 2)')
+                raise TermError('Wrong number of terms (must be exactly 2)')
+            elif len(terms) < 2:
+                raise TermError('Not enough terms (must be at least 2)')
 
         def __str__(self):
             wrap = lambda term: _wrap(term, Operation)
