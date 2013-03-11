@@ -2,10 +2,6 @@
 # Expressions
 # =============================================================================
 
-class NotEnoughTermsError(Exception):
-    def __str__(self):
-        return 'an operation needs at least 2 terms'
-
 class Expression:
     def get_names(self):
         raise NotImplementedError
@@ -75,12 +71,17 @@ class Not(Expression):
 
     symbol = '~'
 
-def operator(symbol, rule):
+class TermError(Exception):
+    pass
+
+def operator(symbol, rule, two_terms=False):
     class Operation(Expression):
         def __init__(self, *terms):
             self.terms = terms
             if len(terms) < 2:
-                raise NotEnoughTermsError
+                raise TermError('Not enough terms (must be at least 2)')
+            if two_terms and len(terms) != 2:
+                raise TermError('Too many terms (must be exactly 2)')
 
         def __str__(self):
             wrap = lambda term: _wrap(term, Operation)
@@ -118,8 +119,8 @@ Or = operator('v', lambda p, q: p or q)
 Xor = operator('XOR', lambda p, q: not p is q)
 Nand = operator('|', lambda p, q: not (p and q))
 Nor = operator('NOR', lambda p, q: not (p or q))
-Conditional = operator('->', lambda p, q: not p or q)
-Biconditional = operator('<->', lambda p, q: p is q)
+Conditional = operator('->', lambda p, q: not p or q, True)
+Biconditional = operator('<->', lambda p, q: p is q, True)
 
 Not.order = 1
 And.order = Or.order = Xor.order = Nand.order = Nor.order = 2
@@ -203,8 +204,9 @@ class Argument:
 
 # =============================================================================
 # Todo:
-# - get parsing working D: (remember: order of ops)
-# - multiple symbols for same operation
+# - get parsing working (remember: order of ops) - yay only brackets to go..
+# - parsing (bi)conditionals into expressions of only two terms
+# - multiple symbols for same operation?
 # - show working steps?
 # - CLI + GUI
 # - simplifier

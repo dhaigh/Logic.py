@@ -22,10 +22,10 @@ ff = {'p': False, 'q': False}
 def test_operation(t, class_):
     try:
         class_(p)
-    except(NotEnoughTermsError):
+    except(TermError):
         pass
     else:
-        t.fail('NotEnoughTermsError not thrown')
+        t.fail('TermError not thrown')
 
     symbol = class_.symbol
     Xpq = class_(p, q)
