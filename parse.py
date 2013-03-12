@@ -116,8 +116,10 @@ class Parser:
             nex = next_toks()
             if isinstance(nex, ONE_TERM_EXPRESSIONS):
                 self.terms.append(nex)
-            else:
+            elif self.operation is None or isinstance(nex, self.operation):
                 self.terms.extend(nex.terms)
                 self.operation = nex.__class__
+            else:
+                self.terms.append(nex)
         else:
             self.terms.append(Var(read(VAR)))

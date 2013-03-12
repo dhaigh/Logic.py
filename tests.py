@@ -54,6 +54,9 @@ class TestExpressions(unittest2.TestCase):
         self.assertTrue(And(p, Np).is_contradiction())
         self.assertTrue(F.is_contradiction())
 
+    def test_equivalence(self):
+        pass#self.assertTrue(T.equivalent(Or(p, Np)))
+
     def test_unconditionals(self):
         self.assertTrue(T.evaluate())
         self.assertFalse(F.evaluate())
@@ -150,7 +153,7 @@ class TestExpressions(unittest2.TestCase):
 
 def test_parse(t, expected, *inputs):
     inputs = map(parse, inputs)
-    return t.assertTrue(all(i == inputs[0] for i in inputs))
+    return t.assertTrue(all(i == expected for i in inputs))
 
 class TestParser(unittest2.TestCase):
     def test_simple(self):
@@ -164,21 +167,34 @@ class TestParser(unittest2.TestCase):
         test_parse(self, Cpq, 'p -> q', 'p->q')
         test_parse(self, Epq, 'p <-> q', 'p<->q')
 
+    def test_spacing(self):
+        test_parse(self, p, '      p',  ' p', '   p    ')
+        test_parse(self, Np, '  ~  p  ', ' ~p ', '~   p')
+        test_parse(self, Apq, 'p ^q', ' p^  q', ' p ^   q')
+        test_parse(self, Nand(Apq, p),
+            'p^q|p', '(p^q)NAND p', '  (p  ^q)|p ')
+
     def test_many_terms(self):
         test_parse(self, And(p, q ,r),
-                   'p ^ q ^ r', 'p^q AND r', 'p AND q AND r',
-                   '(p ^ q)AND r', '((p^(q)))  AND (r )')
+            'p ^ q ^ r', 'p ^ q AND r', 'p AND q AND r',
+            '(p ^ q) AND r', '(p ^ q) AND r')
+
+    def test_different_order(self):
+        test_parse(self, Nand(p, q, r),
+            'p|q|r', 'p|r|q', 'q|p|r', 'q|r|p', 'r|q|p', 'r|p|q')
+        test_parse(self, And(Or(p, q), r),
+            'p v q ^ r', 'q v p ^ r')
 
     def test_brackets(self):
-        test_parse(self, p, '(p)', '(((( p)) ))')
-        test_parse(self, Np, '~(p)', '~(  ((p )))', '(~ (p) )')
+        test_parse(self, p, '(p)', '((((p))))')
+        test_parse(self, Np, '~(p)', '~(((p)))', '(~(p))')
 
     def test_nesting(self):
+        test_parse(self, Or(p, Apq), 'p v (p ^ q)')
         test_parse(self, Nand(And(Var('p'), Var('q')), Var('p')),
-                   'p ^ q | p', '(p^q)|p', '(p^q)NAND p')
+                   'p ^ q | p', '(p ^ q) | p', '(p ^ q) NAND p')
         test_parse(self, Conditional(And(Cpq, p), q),
-                   '((p -> q) ^ p) -> q',
-                   '((p->q)AND p) ->q')
+                   '((p -> q) ^ p) -> q', '((p -> q) AND p) -> q')
 
 
 # =============================================================================

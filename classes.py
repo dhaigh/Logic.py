@@ -12,18 +12,21 @@ class Expression:
     def evaluate(self, var_map):
         raise NotImplementedError
 
+    def equivalent(self, expression):
+        names = [n for n in self.get_names() if n in expression.get_names()]
+
+        for row in TruthTable(self).rows_with_map:
+            print row
+        return True
+
     def same(self, expression):
         raise NotImplementedError
 
     def is_tautology(self):
-        rows = TruthTable(self).rows
-        values = map(lambda v: v[1], rows)
-        return all(values)
+        return all(TruthTable(self).values)
 
     def is_contradiction(self):
-        rows = TruthTable(self).rows
-        values = map(lambda v: v[1], rows)
-        return not any(values)
+        return not any(TruthTable(self).values)
 
 class Unconditional(Expression):
     def __init__(self, symbol, value):
@@ -135,12 +138,15 @@ def operator(symbol, rule, two_terms=False):
             return rule(p, q)
 
         def same(self, expression):
-            if not isinstance(expression, Operation):
+            if (not isinstance(expression, Operation) or
+                len(self.terms) != len(expression.terms)):
                 return False
-            if len(self.terms) != len(expression.terms):
-                return False
-            for i, term in enumerate(self.terms):
-                if not term.same(expression.terms[i]):
+
+            expression_terms = list(expression.terms)
+            for term in self.terms:
+                if term in expression_terms:
+                    expression_terms.remove(term)
+                else:
                     return False
             return True
 
@@ -194,19 +200,24 @@ def _bool_permutations(n):
 
 class TruthTable:
     def __init__(self, expression):
+        if isinstance(expression, str):
+            from parse import parse
+            expression = parse(expression)
         self.expression = expression
         self.rows = []
+        self.rows_with_map = []
+        self.values = []
         self.build()
 
     def __str__(self):
         def row_str(cells):
             tf = {True: 'T', False: 'F'}
-            cells = map(lambda x: tf.get(x, str(x)), cells)
+            cells = map(lambda x: tf.get(x, x), cells)
             return ' | '.join(cells) + '\n'
 
         names = self.expression.get_names()
         rows = map(lambda r: r[0] + [r[1]], self.rows)
-        output = row_str(names + [self.expression])
+        output = row_str(names + [str(self.expression)])
         output += ''.join(map(row_str, rows))
         return output
 
@@ -218,6 +229,8 @@ class TruthTable:
             var_map = dict(zip(names, perm))
             value = self.expression.evaluate(var_map)
             self.rows.append((perm, value))
+            self.rows_with_map.append((var_map, value))
+            self.values.append(value)
 
 
 # =============================================================================
@@ -240,9 +253,12 @@ class Argument:
 
 # =============================================================================
 # Todo:
-# - two expressions equal (truth table)
-# - parser to do order of ops? more/better exceptions?
-# - tests for the parser :3
+# - two expressions equal (truth table), should this or .same be __eq__ ?
+# - parser to recognise order of ops
+# - better parser exceptions (expected x or y, unexpected `)`, etc)
+# - more parser tests
+# - more tests for other new properties (.rows_with_map) / methods (same) /
+#   exceptions (e.g. TermError)
 
 # FUTURE:
 # - show working steps?
