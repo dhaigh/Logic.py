@@ -50,7 +50,9 @@ class Var(Expression):
         return var_map[self.name]
 
 def _wrap(expression, operation=()):
-    dont_wrap = (Unconditional, Var, Not) + (operation,)
+    dont_wrap = (Unconditional, Var, Not)
+    if operation not in (Conditional, Biconditional):
+        dont_wrap += (operation,)
     if isinstance(expression, dont_wrap):
         return '%s' % expression
     return '(%s)' % expression
@@ -128,14 +130,17 @@ Conditional.order = Biconditional.order = 3
 
 def get_operation(symbol):
     operations = {
-        '^': And,
-        'v': Or,
+        'AND': And, '^': And,
+        'OR': Or, 'V': Or,
         'XOR': Xor,
-        '|': Nand,
+        'NAND': Nand, '|': Nand,
         'NOR': Nor,
         '->': Conditional,
         '<->': Biconditional
     }
+    symbol = symbol.upper()
+    if symbol not in operations:
+        raise Exception('Invalid symbol')
     return operations[symbol]
 
 # =============================================================================
@@ -204,10 +209,14 @@ class Argument:
 
 # =============================================================================
 # Todo:
-# - get parsing working (remember: order of ops) - yay only brackets to go..
-# - parsing (bi)conditionals into expressions of only two terms
-# - multiple symbols for same operation?
+# - two expressions equal (truth table)
+# - parser to do order of ops? more/better exceptions?
+# - tests for the parser :3
+
+# FUTURE:
 # - show working steps?
 # - CLI + GUI
 # - simplifier
 # - circuit diagram
+# - configuration e.g. default symbol, new operations
+

@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 
-from parser import *
+from parse import *
 
 def main():
     pass
