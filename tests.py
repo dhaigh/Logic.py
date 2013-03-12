@@ -19,7 +19,11 @@ tf = {'p': True, 'q': False}
 ft = {'p': False, 'q': True}
 ff = {'p': False, 'q': False}
 
-def test_operation(t, class_):
+# =============================================================================
+# Operations
+# =============================================================================
+
+def test_operation(t, class_, two_terms=False):
     try:
         class_(p)
     except(TermError):
@@ -35,8 +39,9 @@ def test_operation(t, class_):
     t.assertIs(Xpq[0], p)
     t.assertIs(Xpq[1], q)
     t.assertEquals(str(Xpq), 'p %s q' % symbol)
-    t.assertEquals(str(Xpqr), 'p %s q %s r' % (symbol, symbol))
-    t.assertEquals(str(Xrpq), 'r %s p %s q' % (symbol, symbol))
+    if not two_terms:
+        t.assertEquals(str(Xpqr), 'p %s q %s r' % (symbol, symbol))
+        t.assertEquals(str(Xrpq), 'r %s p %s q' % (symbol, symbol))
     t.assertEquals(Xpq.get_names(), ['p', 'q'])
 
 class TestExpressions(unittest2.TestCase):
@@ -103,14 +108,14 @@ class TestExpressions(unittest2.TestCase):
         self.assertEquals(Xpq.evaluate(ff), True)
 
     def test_conditional(self):
-        test_operation(self, Conditional)
+        test_operation(self, Conditional, True)
         self.assertEquals(Cpq.evaluate(tt), True)
         self.assertEquals(Cpq.evaluate(tf), False)
         self.assertEquals(Cpq.evaluate(ft), True)
         self.assertEquals(Cpq.evaluate(ff), True)
 
     def test_biconditional(self):
-        test_operation(self, Biconditional)
+        test_operation(self, Biconditional, True)
         self.assertEquals(Epq.evaluate(tt), True)
         self.assertEquals(Epq.evaluate(tf), False)
         self.assertEquals(Epq.evaluate(ft), False)
@@ -138,6 +143,47 @@ class TestExpressions(unittest2.TestCase):
                 '((((((p <-> p) -> p) NOR p) | p) XOR p) v p) ^ p')
         self.assertEquals(str(And(p, And(q, And(r, And(Nor(p, Nor(q, r)), Not(q)))))),
                 'p ^ q ^ r ^ (p NOR q NOR r) ^ ~q')
+
+# =============================================================================
+# Parser
+# =============================================================================
+
+def test_parse(t, expected, *inputs):
+    inputs = map(parse, inputs)
+    return t.assertTrue(all(i == inputs[0] for i in inputs))
+
+class TestParser(unittest2.TestCase):
+    def test_simple(self):
+        test_parse(self, p, 'p')
+        test_parse(self, Np, '~p')
+        test_parse(self, Apq, 'p ^ q', 'p^q', 'p AND q')
+        test_parse(self, Opq, 'p v q', 'p OR q')
+        test_parse(self, Jpq, 'p XOR q')
+        test_parse(self, Dpq, 'p | q', 'p|q', 'p NAND q')
+        test_parse(self, Xpq, 'p NOR q')
+        test_parse(self, Cpq, 'p -> q', 'p->q')
+        test_parse(self, Epq, 'p <-> q', 'p<->q')
+
+    def test_many_terms(self):
+        test_parse(self, And(p, q ,r),
+                   'p ^ q ^ r', 'p^q AND r', 'p AND q AND r',
+                   '(p ^ q)AND r', '((p^(q)))  AND (r )')
+
+    def test_brackets(self):
+        test_parse(self, p, '(p)', '(((( p)) ))')
+        test_parse(self, Np, '~(p)', '~(  ((p )))', '(~ (p) )')
+
+    def test_nesting(self):
+        test_parse(self, Nand(And(Var('p'), Var('q')), Var('p')),
+                   'p ^ q | p', '(p^q)|p', '(p^q)NAND p')
+        test_parse(self, Conditional(And(Cpq, p), q),
+                   '((p -> q) ^ p) -> q',
+                   '((p->q)AND p) ->q')
+
+
+# =============================================================================
+# Truth Tables
+# =============================================================================
 
 tt_p = TruthTable(p)
 tt_Apq = TruthTable(Apq)
@@ -173,6 +219,9 @@ class TestTruthTable(unittest2.TestCase):
     def test_str(self):
         pass
 
+# =============================================================================
+# Arguments
+# =============================================================================
 
 class TestArguments(unittest2.TestCase):
     def test_init(self):

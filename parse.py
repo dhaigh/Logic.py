@@ -20,38 +20,66 @@ def error(expected, saw):
         saw = 'nothing (end of expression)'
     raise SyntaxError('Expected %s, saw %s' % (expected, saw))
 
-def parse(expression):
-    return parse_tokens(tokenize(expression))
+def expect(token_type, token):
+    types = {
+        OPERATION: (isop, 'an operation'),
+        VAR: (isvar, 'a variable')
+    }
+    type_check, expected = types[token_type]
 
-def parse_tokens(tokens):
-    def read(token_type=None):
+    if token is None:
+        error(expected, None)
+    if type_check(token) is None:
+        error(expected, token)
+
+def parse(expression):
+    return Parser(tokenize(expression)).parse()
+
+class Parser:
+    def __init__(self, tokens):
+        self.tokens = tokens
+        self.terms = []
+        self.operation = None
+
+    def parse(self):
+        read = self.read
+        read_term = self.read_term
+        next_toks = self.next_toks
+        peek = self.peek
+
+        while True:
+            read_term()
+            if peek() is None:
+                break
+
+            symbol = read(OPERATION)
+            new_operation = get_operation(symbol)
+            if (new_operation is self.operation is Conditional or
+                self.operation and self.operation is not new_operation):
+                self.terms = [self.operation(*self.terms)]
+            self.operation = new_operation
+
+        if self.operation is None:
+            return self.terms[0]
+        return self.operation(*self.terms)
+
+    def read(self, token_type=None):
         if token_type is None:
-            return tokens.pop(0)
-        token = read()
+            return self.tokens.pop(0)
+        token = self.read()
         expect(token_type, token)
         return token
 
-    def peek():
-        if len(tokens) == 0:
+    def peek(self):
+        if len(self.tokens) == 0:
             return
-        return tokens[0]
+        return self.tokens[0]
 
-    def expect(token_type, token):
-        types = {
-            OPERATION: (isop, 'an operation'),
-            VAR: (isvar, 'a variable')
-        }
-        type_check, expected = types[token_type]
+    def next_toks(self):
+        read = self.read
+        peek = self.peek
+        next_toks = self.next_toks
 
-        if token is None:
-            error(expected, None)
-        if type_check(token) is None:
-            error(expected, token)
-
-    terms = []
-    symbol = None
-
-    def next_toks():
         depth = 0
         if peek() == '~':
             read()
@@ -60,7 +88,7 @@ def parse_tokens(tokens):
             read()
             toks = []
             depth = 1
-            while tokens:
+            while self.tokens:
                 tok = read()
                 if tok == '(':
                     depth += 1
@@ -72,30 +100,24 @@ def parse_tokens(tokens):
             else:
                 error('`)`', None)
                 
-            return parse_tokens(toks)
+            return Parser(toks).parse()
         elif isvar(peek()):
             return Var(read())
         
-        
-    def read_term():
+    def read_term(self):
+        read = self.read
+        peek = self.peek
+        next_toks = self.next_toks
+
         if peek() == '~':
             read()
-            terms.append(Not(next_toks()))
+            self.terms.append(Not(next_toks()))
         elif peek() == '(':
-            terms.append(next_toks())
+            nex = next_toks()
+            if isinstance(nex, ONE_TERM_EXPRESSIONS):
+                self.terms.append(nex)
+            else:
+                self.terms.extend(nex.terms)
+                self.operation = nex.__class__
         else:
-            terms.append(Var(read(VAR)))
-
-    while True:
-        read_term()
-        if peek() is None:
-            break
-        new_symbol = read(OPERATION)
-        if (symbol == new_symbol == '->' or
-            symbol and symbol != new_symbol):
-            terms = [get_operation(symbol)(*terms)]
-        symbol = new_symbol
-
-    if symbol is None:
-        return terms[0]
-    return get_operation(symbol)(*terms)
+            self.terms.append(Var(read(VAR)))

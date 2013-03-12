@@ -3,10 +3,16 @@
 # =============================================================================
 
 class Expression:
+    def __eq__(self, expr):
+        return self.same(expr)
+
     def get_names(self):
         raise NotImplementedError
 
     def evaluate(self, var_map):
+        raise NotImplementedError
+
+    def same(self, expression):
         raise NotImplementedError
 
     def is_tautology(self):
@@ -33,6 +39,11 @@ class Unconditional(Expression):
     def evaluate(self, _=None):
         return self.value
 
+    def same(self, expression):
+        return (isinstance(expression, Unconditional) and
+                self.symbol == expression.symbol and
+                self.value == expression.value)
+
 T = Unconditional('T', True)
 F = Unconditional('F', False)
 
@@ -49,15 +60,13 @@ class Var(Expression):
     def evaluate(self, var_map):
         return var_map[self.name]
 
-def _wrap(expression, operation=()):
-    dont_wrap = (Unconditional, Var, Not)
-    if operation not in (Conditional, Biconditional):
-        dont_wrap += (operation,)
-    if isinstance(expression, dont_wrap):
-        return '%s' % expression
-    return '(%s)' % expression
+    def same(self, expression):
+        return (isinstance(expression, Var) and
+                self.name == expression.name)
 
 class Not(Expression):
+    symbol = '~'
+
     def __init__(self, term):
         self.term = term
 
@@ -71,7 +80,19 @@ class Not(Expression):
         term = self.term.evaluate(var_map)
         return not term
 
-    symbol = '~'
+    def same(self, expression):
+        return (isinstance(expression, Not) and
+                self.term.same(expression.term))
+
+ONE_TERM_EXPRESSIONS = (Unconditional, Var, Not)
+
+def _wrap(expression, operation=()):
+    dont_wrap = ONE_TERM_EXPRESSIONS
+    if operation not in (Conditional, Biconditional):
+        dont_wrap += (operation,)
+    if isinstance(expression, dont_wrap):
+        return '%s' % expression
+    return '(%s)' % expression
 
 class TermError(Exception):
     pass
@@ -112,6 +133,16 @@ def operator(symbol, rule, two_terms=False):
             p = p.evaluate(var_map)
             q = q.evaluate(var_map)
             return rule(p, q)
+
+        def same(self, expression):
+            if not isinstance(expression, Operation):
+                return False
+            if len(self.terms) != len(expression.terms):
+                return False
+            for i, term in enumerate(self.terms):
+                if not term.same(expression.terms[i]):
+                    return False
+            return True
 
     Operation.symbol = symbol
     return Operation
