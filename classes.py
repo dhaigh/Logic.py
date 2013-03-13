@@ -2,6 +2,12 @@
 # Expressions
 # =============================================================================
 
+def _parse(expression):
+    if isinstance(expression, str):
+        from parse import parse
+        expression = parse(expression)
+    return expression
+
 class Expression:
     def __eq__(self, expr):
         return self.same(expr)
@@ -13,10 +19,17 @@ class Expression:
         raise NotImplementedError
 
     def equivalent(self, expression):
-        names = [n for n in self.get_names() if n in expression.get_names()]
+        expression = _parse(expression)
+        common_names = [n for n in self.get_names() if n in expression.get_names()]
+        self_rows = TruthTable(self).get_rows(common_names)
+        expr_rows = TruthTable(expression).get_rows(common_names)
+        shorter, longer = self_rows, expr_rows
+        if len(longer) < len(shorter):
+            shorter, longer = longer, shorter
 
-        for row in TruthTable(self).rows_with_map:
-            print row
+        for row in longer:
+            if row not in shorter:
+                return False
         return True
 
     def same(self, expression):
@@ -200,10 +213,8 @@ def _bool_permutations(n):
 
 class TruthTable:
     def __init__(self, expression):
-        if isinstance(expression, str):
-            from parse import parse
-            expression = parse(expression)
-        self.expression = expression
+        self.expression = _parse(expression)
+        self.var_names = self.expression.get_names()
         self.rows = []
         self.rows_with_map = []
         self.values = []
@@ -215,11 +226,29 @@ class TruthTable:
             cells = map(lambda x: tf.get(x, x), cells)
             return ' | '.join(cells) + '\n'
 
-        names = self.expression.get_names()
         rows = map(lambda r: r[0] + [r[1]], self.rows)
-        output = row_str(names + [str(self.expression)])
+        output = row_str(self.var_names + [str(self.expression)])
         output += ''.join(map(row_str, rows))
         return output
+
+    def get_rows(self, cols=None):
+        if cols is None:
+            return self.rows
+        
+        desired_cols = []
+        for i, n in enumerate(self.var_names):
+            if n in cols:
+                desired_cols.append(i)
+
+        desired_rows = []
+        rz = []
+        for row in self.rows:
+            values = []
+            for i, value in enumerate(row[0]):
+                if i in desired_cols:
+                    values.append(value)
+            rz.append((values, row[1]))
+        return rz
 
     def build(self):
         names = self.expression.get_names()
@@ -229,7 +258,6 @@ class TruthTable:
             var_map = dict(zip(names, perm))
             value = self.expression.evaluate(var_map)
             self.rows.append((perm, value))
-            self.rows_with_map.append((var_map, value))
             self.values.append(value)
 
 
@@ -255,7 +283,8 @@ class Argument:
 # Todo:
 # - two expressions equal (truth table), should this or .same be __eq__ ?
 # - parser to recognise order of ops
-# - better parser exceptions (expected x or y, unexpected `)`, etc)
+# - better parser exceptions (expected x or y, unexpected `)`/number/symbol, etc)
+# - allow variables to be of the form [a-zA-Z][a-zA-Z0-9_]*
 # - more parser tests
 # - more tests for other new properties (.rows_with_map) / methods (same) /
 #   exceptions (e.g. TermError)
