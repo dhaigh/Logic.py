@@ -29,7 +29,7 @@ def test_operation(t, class_, two_terms=False):
     except(TermError):
         pass
     else:
-        t.fail('TermError not thrown')
+        t.fail('`TermError` not thrown')
 
     symbol = class_.symbol
     Xpq = class_(p, q)
@@ -55,7 +55,20 @@ class TestExpressions(unittest2.TestCase):
         self.assertTrue(F.is_contradiction())
 
     def test_equivalence(self):
-        pass#self.assertTrue(T.equivalent(Or(p, Np)))
+        self.assertTrue(p.equivalent_to(p))
+        self.assertTrue(T.equivalent_to(Or(p, Np)))
+        self.assertTrue(F.equivalent_to(And(p, Np)))
+        self.assertTrue(parse('p -> q').equivalent_to('~p v q'))
+        self.assertTrue(p.equivalent_to('p ^ (p v q)'))
+        self.assertTrue(p.equivalent_to('p v (p ^ q)'))
+        self.assertTrue(p == p)
+        self.assertTrue(Apq == 'p ^ q')
+        self.assertFalse(p.equivalent_to(q))
+        self.assertFalse(parse('p -> q').equivalent_to('a -> b'))
+        self.assertFalse(parse('a ^ b').equivalent_to('a v b'))
+
+    def test_similarity(self):
+        self.assertFalse(Apq.same(Opq))
 
     def test_unconditionals(self):
         self.assertTrue(T.evaluate())
@@ -153,7 +166,11 @@ class TestExpressions(unittest2.TestCase):
 
 def test_parse(t, expected, *inputs):
     inputs = map(parse, inputs)
-    return t.assertTrue(all(i == expected for i in inputs))
+    return t.assertTrue(all(map(expected.same, inputs)))
+
+def test_parse_false(t, expected, *inputs):
+    inputs = map(parse, inputs)
+    return t.assertFalse(any(map(expected.same, inputs)))
 
 class TestParser(unittest2.TestCase):
     def test_simple(self):
@@ -167,6 +184,14 @@ class TestParser(unittest2.TestCase):
         test_parse(self, Cpq, 'p -> q', 'p->q')
         test_parse(self, Epq, 'p <-> q', 'p<->q')
 
+    def test_variables(self):
+        test_parse(self, Var('Abc'), 'Abc')
+        test_parse(self, Var('a1'), 'a1')
+        test_parse(self, Var('a_a'), 'a_a')
+        test_parse(self, Var('a__10F_'), 'a__10F_')
+        test_parse_false(self, Var('a__10F_'), 'a__10F')
+        test_parse_false(self, Var('Abc'), 'abc')
+
     def test_spacing(self):
         test_parse(self, p, '      p',  ' p', '   p    ')
         test_parse(self, Np, '  ~  p  ', ' ~p ', '~   p')
@@ -177,7 +202,7 @@ class TestParser(unittest2.TestCase):
     def test_many_terms(self):
         test_parse(self, And(p, q ,r),
             'p ^ q ^ r', 'p ^ q AND r', 'p AND q AND r',
-            '(p ^ q) AND r', '(p ^ q) AND r')
+            '(p ^ q) AND r', '(p ^ q) AND r', 'p ^ (r^q)')
 
     def test_different_order(self):
         test_parse(self, Nand(p, q, r),

@@ -9,28 +9,21 @@ def _parse(expression):
     return expression
 
 class Expression:
-    def __eq__(self, expr):
-        return self.same(expr)
+    def __eq__(self, expression):
+        return self.equivalent_to(expression)
+
+    def __len__(self):
+        raise NotImplementedError
 
     def get_names(self):
         raise NotImplementedError
 
-    def evaluate(self, var_map):
+    def evaluate(self, variables):
         raise NotImplementedError
 
-    def equivalent(self, expression):
+    def equivalent_to(self, expression):
         expression = _parse(expression)
-        common_names = [n for n in self.get_names() if n in expression.get_names()]
-        self_rows = TruthTable(self).get_rows(common_names)
-        expr_rows = TruthTable(expression).get_rows(common_names)
-        shorter, longer = self_rows, expr_rows
-        if len(longer) < len(shorter):
-            shorter, longer = longer, shorter
-
-        for row in longer:
-            if row not in shorter:
-                return False
-        return True
+        return Biconditional(self, expression).is_tautology()
 
     def same(self, expression):
         raise NotImplementedError
@@ -45,6 +38,9 @@ class Unconditional(Expression):
     def __init__(self, symbol, value):
         self.symbol = symbol
         self.value = value
+
+    def __len__(self):
+        return 0
 
     def __str__(self):
         return self.symbol
@@ -67,14 +63,17 @@ class Var(Expression):
     def __init__(self, name):
         self.name = name
 
+    def __len__(self):
+        return 1
+
     def __str__(self):
         return self.name
 
     def get_names(self):
         return [self.name]
 
-    def evaluate(self, var_map):
-        return var_map[self.name]
+    def evaluate(self, variables):
+        return variables[self.name]
 
     def same(self, expression):
         return (isinstance(expression, Var) and
@@ -86,14 +85,17 @@ class Not(Expression):
     def __init__(self, term):
         self.term = term
 
+    def __len__(self):
+        return 1
+
     def __str__(self):
         return '~%s' % _wrap(self.term)
 
     def get_names(self):
         return self.term.get_names()
 
-    def evaluate(self, var_map):
-        term = self.term.evaluate(var_map)
+    def evaluate(self, variables):
+        term = self.term.evaluate(variables)
         return not term
 
     def same(self, expression):
@@ -113,8 +115,23 @@ def _wrap(expression, operation=()):
 class TermError(Exception):
     pass
 
+class Operation(Expression):
+    def __len__(self):
+        return len(self.terms)
+
+    def __getitem__(self, index):
+        return self.terms[index]
+
+    def get_names(self):
+        names = []
+        for term in self.terms:
+            for name in term.get_names():
+                if name not in names:
+                    names.append(name)
+        return sorted(names)
+
 def operator(symbol, rule, two_terms=False):
-    class Operation(Expression):
+    class Operation_(Operation):
         def __init__(self, *terms):
             self.terms = terms
             if two_terms and len(terms) != 2:
@@ -123,35 +140,16 @@ def operator(symbol, rule, two_terms=False):
                 raise TermError('Not enough terms (must be at least 2)')
 
         def __str__(self):
-            wrap = lambda term: _wrap(term, Operation)
+            wrap = lambda term: _wrap(term, Operation_)
             terms = map(wrap, self.terms)
             return (' %s ' % symbol).join(terms)
 
-        def __getitem__(self, index):
-            return self.terms[index]
-
-        def get_names(self):
-            names = []
-            for term in self.terms:
-                for name in term.get_names():
-                    if name not in names:
-                        names.append(name)
-            return sorted(names)
-
-        def evaluate(self, var_map):
-            terms = self.terms
-            p = terms[0]
-            if len(terms) == 2:
-                q = terms[1]
-            else:
-                q = Operation(*terms[1:])
-
-            p = p.evaluate(var_map)
-            q = q.evaluate(var_map)
-            return rule(p, q)
+        def evaluate(self, variables):
+            values = map(lambda t: t.evaluate(variables), self.terms)
+            return reduce(rule, values)
 
         def same(self, expression):
-            if (not isinstance(expression, Operation) or
+            if (not isinstance(expression, Operation_) or
                 len(self.terms) != len(expression.terms)):
                 return False
 
@@ -163,8 +161,8 @@ def operator(symbol, rule, two_terms=False):
                     return False
             return True
 
-    Operation.symbol = symbol
-    return Operation
+    Operation_.symbol = symbol
+    return Operation_
 
 And = operator('^', lambda p, q: p and q)
 Or = operator('v', lambda p, q: p or q)
@@ -172,11 +170,7 @@ Xor = operator('XOR', lambda p, q: not p is q)
 Nand = operator('|', lambda p, q: not (p and q))
 Nor = operator('NOR', lambda p, q: not (p or q))
 Conditional = operator('->', lambda p, q: not p or q, True)
-Biconditional = operator('<->', lambda p, q: p is q, True)
-
-Not.order = 1
-And.order = Or.order = Xor.order = Nand.order = Nor.order = 2
-Conditional.order = Biconditional.order = 3
+Biconditional = operator('<->', lambda p, q: p is q)
 
 def get_operation(symbol):
     operations = {
@@ -192,6 +186,7 @@ def get_operation(symbol):
     if symbol not in operations:
         raise Exception('Invalid symbol')
     return operations[symbol]
+
 
 # =============================================================================
 # Truth table
@@ -214,9 +209,8 @@ def _bool_permutations(n):
 class TruthTable:
     def __init__(self, expression):
         self.expression = _parse(expression)
-        self.var_names = self.expression.get_names()
+        self.variables = self.expression.get_names()
         self.rows = []
-        self.rows_with_map = []
         self.values = []
         self.build()
 
@@ -227,36 +221,17 @@ class TruthTable:
             return ' | '.join(cells) + '\n'
 
         rows = map(lambda r: r[0] + [r[1]], self.rows)
-        output = row_str(self.var_names + [str(self.expression)])
+        output = row_str(self.variables + [str(self.expression)])
         output += ''.join(map(row_str, rows))
         return output
-
-    def get_rows(self, cols=None):
-        if cols is None:
-            return self.rows
-        
-        desired_cols = []
-        for i, n in enumerate(self.var_names):
-            if n in cols:
-                desired_cols.append(i)
-
-        desired_rows = []
-        rz = []
-        for row in self.rows:
-            values = []
-            for i, value in enumerate(row[0]):
-                if i in desired_cols:
-                    values.append(value)
-            rz.append((values, row[1]))
-        return rz
 
     def build(self):
         names = self.expression.get_names()
         n_vars = len(names)
 
         for perm in _bool_permutations(n_vars):
-            var_map = dict(zip(names, perm))
-            value = self.expression.evaluate(var_map)
+            variables = dict(zip(names, perm))
+            value = self.expression.evaluate(variables)
             self.rows.append((perm, value))
             self.values.append(value)
 
@@ -281,13 +256,14 @@ class Argument:
 
 # =============================================================================
 # Todo:
-# - two expressions equal (truth table), should this or .same be __eq__ ?
+# - make the tokenizer tokenize everything!!!
+# - for the love of god clean up the parser
 # - parser to recognise order of ops
 # - better parser exceptions (expected x or y, unexpected `)`/number/symbol, etc)
 # - allow variables to be of the form [a-zA-Z][a-zA-Z0-9_]*
 # - more parser tests
-# - more tests for other new properties (.rows_with_map) / methods (same) /
-#   exceptions (e.g. TermError)
+# - more tests for other new properties (.rows_with_map) / methods (same/len) /
+#   more exceptions generally (e.g. TermError)
 
 # FUTURE:
 # - show working steps?
