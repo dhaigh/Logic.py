@@ -1,9 +1,9 @@
 from classes import *
 import re
 
-lexer_re = re.compile(r'[a-zA-Z]\w*|[~\^()\|]|->|<->|[^\s]+?')
-variable_re = re.compile(r'^[a-zA-Z]\w*$')
-op_re = re.compile(r'^(?:[\^v\|]|AND|OR|XOR|NAND|NOR|->|<->)$', re.I)
+lexer_re = re.compile(r'[a-zA-Z]\w*|[~\^()\|]|->|<->|\S+?')
+var_re = re.compile(r'^[a-zA-Z]\w*$')
+operation_re = re.compile(r'^(?:[\^v\|]|AND|OR|XOR|NAND|NOR|->|<->)$', re.I)
 
 def tokenize(expression):
 	return lexer_re.findall(expression)		
@@ -11,12 +11,12 @@ def tokenize(expression):
 def isvar(token):
     if token is None:
         return None
-    return variable_re.match(token)
+    return var_re.match(token)
 
-def isop(token):
+def isoperation(token):
     if token is None:
         return None
-    return op_re.match(token)
+    return operation_re.match(token)
 
 def expected(expected, saw):
     if saw is None:
@@ -35,9 +35,9 @@ class Parser:
         self.operation = None
 
     def read(self):
-        if len(self.tokens) == 0:
-            return None
-        return self.tokens.pop(0)
+        if self.tokens:
+            return self.tokens.pop(0)
+        return None
 
     def parse(self):
         while True:
@@ -53,7 +53,7 @@ class Parser:
             token = self.read()
             if token is None:
                 break
-            if not isop(token):
+            if not isoperation(token):
                 expected('an operation or EOE', token)
 
             new_op = get_operation(token)
@@ -68,6 +68,7 @@ class Parser:
 
     def next_term(self):
         token = self.read()
+
         if isvar(token):
             return Var(token)
 
