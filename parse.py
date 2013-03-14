@@ -4,7 +4,6 @@ import re
 lexer_re = re.compile(r'[a-zA-Z]\w*|[~\^()\|]|->|<->')
 variable_re = re.compile(r'^[a-zA-Z]\w*$')
 op_re = re.compile(r'^(?:[\^v\|]|AND|OR|XOR|NAND|NOR|->|<->)$', re.I)
-VAR, OPERATION = range(2)
 
 def tokenize(expression):
     return lexer_re.findall(expression)
@@ -35,31 +34,37 @@ class Parser:
         self.terms = []
         self.operation = None
 
+    def read(self):
+        if len(self.tokens) == 0:
+            return None
+        return self.tokens.pop(0)
+
     def parse(self):
         while True:
-            self.read_term()
+            term = self.next_term()
+            op = self.operation
+            if ((op is None and isinstance(term, Operation)) or
+                (op and isinstance(term, op))):
+                self.terms.extend(term.terms)
+                self.operation = op = term.__class__
+            else:
+                self.terms.append(term)
+
             token = self.read()
             if token is None:
                 break
             if not isop(token):
                 expected('an operation or EOE', token)
 
-            op = self.operation
-            new_operation = get_operation(token)
-
-            if (op is new_operation is Conditional or
-                op and op is not new_operation):
+            new_op = get_operation(token)
+            if ((op is new_op is Conditional) or
+                (op and op is not new_op)):
                 self.terms = [op(*self.terms)]
-            self.operation = new_operation
+            self.operation = new_op
 
         if self.operation is None:
             return self.terms[0]
         return self.operation(*self.terms)
-
-    def read(self):
-        if len(self.tokens) == 0:
-            return None
-        return self.tokens.pop(0)
 
     def next_term(self):
         token = self.read()
@@ -72,23 +77,12 @@ class Parser:
                 if tok == '(':
                     depth += 1
                 elif tok == ')':
-                    depth -= 1
-                    if depth == 0:
+                    if depth == 1:
                         break
+                    depth -= 1
                 toks.append(tok)
             return Parser(toks).parse()
         elif isvar(token):
             return Var(token)
         else:
             expected('a term', token)
-
-    def read_term(self):
-        term = self.next_term()
-        op = self.operation
-
-        if isinstance(term, Operation) and (
-            op is None or isinstance(term, op)):
-            self.terms.extend(term.terms)
-            self.operation = term.__class__
-        else:
-            self.terms.append(term)
