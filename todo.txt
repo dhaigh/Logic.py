@@ -1,5 +1,4 @@
 Todo:
-- make the tokenizer tokenize everything!!!
 - parser to recognise order of ops
 - more parser tests
 - more tests for other new methods (same/len) / more exceptions generally (e.g. TermError)

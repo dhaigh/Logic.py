@@ -1,12 +1,12 @@
 from classes import *
 import re
 
-lexer_re = re.compile(r'[a-zA-Z]\w*|[~\^()\|]|->|<->')
+lexer_re = re.compile(r'[a-zA-Z]\w*|[~\^()\|]|->|<->|[^\s]+?')
 variable_re = re.compile(r'^[a-zA-Z]\w*$')
 op_re = re.compile(r'^(?:[\^v\|]|AND|OR|XOR|NAND|NOR|->|<->)$', re.I)
 
 def tokenize(expression):
-    return lexer_re.findall(expression)
+	return lexer_re.findall(expression)		
 
 def isvar(token):
     if token is None:
@@ -68,9 +68,13 @@ class Parser:
 
     def next_term(self):
         token = self.read()
+        if isvar(token):
+            return Var(token)
+
         if token == '~':
             return Not(self.next_term())
-        elif token == '(':
+
+        if token == '(':
             toks, depth = [], 1
             while self.tokens:
                 tok = self.read()
@@ -82,7 +86,5 @@ class Parser:
                     depth -= 1
                 toks.append(tok)
             return Parser(toks).parse()
-        elif isvar(token):
-            return Var(token)
-        else:
-            expected('a term', token)
+
+        expected('a term', token)
