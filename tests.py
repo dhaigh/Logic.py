@@ -1,7 +1,9 @@
 #!/usr/bin/env python2
 
 import unittest
-from logic import *
+from logic.argument import *
+from logic.expressions import *
+from logic.parse import *
 
 p, q, r = Var('p'), Var('q'), Var('r')
 

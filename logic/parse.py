@@ -1,4 +1,4 @@
-from classes import *
+from expressions import *
 import re
 
 lexer_re = re.compile(r'[a-zA-Z]\w*|[~\^()\|]|->|<->|\S+?')
@@ -6,7 +6,7 @@ var_re = re.compile(r'^[a-zA-Z]\w*$')
 operation_re = re.compile(r'^(?:[\^v\|]|AND|OR|XOR|NAND|NOR|->|<->)$', re.I)
 
 def tokenize(expression):
-	return lexer_re.findall(expression)		
+	return lexer_re.findall(expression)
 
 def isvar(token):
     if token is None:
@@ -26,6 +26,8 @@ def expected(expected, saw):
     raise SyntaxError('expected %s, saw %s' % (expected, saw))
 
 def parse(expression):
+    if isinstance(expression, Expression):
+        return expression
     return Parser(tokenize(expression)).parse()
 
 class Parser:

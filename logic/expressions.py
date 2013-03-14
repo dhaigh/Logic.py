@@ -1,12 +1,4 @@
-# =============================================================================
-# Expressions
-# =============================================================================
-
-def _parse(expression):
-    if isinstance(expression, str):
-        from parse import parse
-        expression = parse(expression)
-    return expression
+from truthtable import *
 
 class Expression:
     def __eq__(self, expression):
@@ -17,6 +9,9 @@ class Expression:
     def __len__(self):
         raise NotImplementedError
 
+    def __str__(self):
+        raise NotImplementedError
+
     def get_names(self):
         raise NotImplementedError
 
@@ -24,7 +19,8 @@ class Expression:
         raise NotImplementedError
 
     def equivalent_to(self, expression):
-        expression = _parse(expression)
+        from parse import parse
+        expression = parse(expression)
         return Biconditional(self, expression).is_tautology()
 
     def is_tautology(self):
@@ -157,69 +153,3 @@ def get_operation(symbol):
     if symbol not in operations:
         raise Exception('Invalid symbol')
     return operations[symbol]
-
-
-# =============================================================================
-# Truth table
-# =============================================================================
-
-def _bool_permutations(n):
-    if n == 1:
-        return [[True], [False]]
-
-    if n <= 0:
-        return [[]]
-
-    perms = []
-    sub_perms = _bool_permutations(n - 1)
-    for value in (True, False):
-        for perm in sub_perms:
-            perms.append([value] + perm)
-    return perms
-
-class TruthTable:
-    def __init__(self, expression):
-        self.expression = _parse(expression)
-        self.variables = self.expression.get_names()
-        self.rows = []
-        self.values = []
-        self.build()
-
-    def __str__(self):
-        def row_str(cells):
-            tf = {True: 'T', False: 'F'}
-            cells = map(lambda x: tf.get(x, x), cells)
-            return ' | '.join(cells) + '\n'
-
-        rows = map(lambda r: r[0] + [r[1]], self.rows)
-        output = row_str(self.variables + [str(self.expression)])
-        output += ''.join(map(row_str, rows))
-        return output
-
-    def build(self):
-        names = self.expression.get_names()
-        n_vars = len(names)
-
-        for perm in _bool_permutations(n_vars):
-            variables = dict(zip(names, perm))
-            value = self.expression.evaluate(variables)
-            self.rows.append((perm, value))
-            self.values.append(value)
-
-
-# =============================================================================
-# Arguments
-# =============================================================================
-
-class Argument:
-    def __init__(self, propositions, implication):
-        self.propositions = propositions
-        self.implication = implication
-
-    def is_valid(self):
-        if len(self.propositions) == 1:
-            p = self.propositions[0]
-        else:
-            p = And(*self.propositions)
-        q = self.implication
-        return Conditional(p, q).is_tautology()
