@@ -1,0 +1,16 @@
+Todo:
+- make the tokenizer tokenize everything!!!
+- for the love of god clean up the parser
+- parser to recognise order of ops
+- better parser exceptions (expected x or y, unexpected `)`/number/symbol, etc)
+- allow variables to be of the form [a-zA-Z][a-zA-Z0-9_]*
+- more parser tests
+- more tests for other new properties (.rows_with_map) / methods (same/len) / more exceptions generally (e.g. TermError)
+
+FUTURE:
+- show working steps?
+- CLI + GUI
+- simplifier
+- circuit diagram
+- configuration e.g. default symbol, new operations
+- parser exceptions to show entire expression in raw form, using character indicies, arrows, etc.
