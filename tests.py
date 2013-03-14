@@ -1,9 +1,7 @@
 #!/usr/bin/env python2
 
 import unittest
-from logic.argument import *
-from logic.expressions import *
-from logic.parse import *
+from logic import *
 
 p, q, r = Var('p'), Var('q'), Var('r')
 
@@ -288,24 +286,6 @@ class TestTruthTable(unittest.TestCase):
         ])
         self.assertEquals(TruthTable(T).rows, [([], t)])
         self.assertEquals(TruthTable(F).rows, [([], f)])
-
-# =============================================================================
-# Arguments
-# =============================================================================
-
-class TestArguments(unittest.TestCase):
-    def test_init(self):
-        arg = Argument([p, q, r], r)
-        self.assertEquals(arg.propositions, [p, q, r])
-        self.assertIs(arg.implication, r)
-
-    def test_validation(self):
-        arg1 = Argument([p, q], p)
-        arg2 = Argument([p, q, Conditional(Apq, r)], r)
-        self.assertIs(arg1.is_valid(), True)
-        self.assertIs(arg2.is_valid(), True)
-        arg3 = Argument([p], q)
-        self.assertIs(arg3.is_valid(), False)
 
 if __name__ == '__main__':
     unittest.main()
