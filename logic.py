@@ -26,11 +26,11 @@ class Expression:
         expression = parse(expression)
         return Biconditional(self, expression).is_tautology()
 
-    def is_tautology(self):
-        return all(TruthTable(self).values)
-
     def is_contradiction(self):
         return not any(TruthTable(self).values)
+
+    def is_tautology(self):
+        return all(TruthTable(self).values)
 
 class Unconditional(Expression):
     def __init__(self, symbol, value):
