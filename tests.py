@@ -23,18 +23,18 @@ ff = {'p': False, 'q': False}
 # Operations
 # =============================================================================
 
-def test_operation(t, class_, two_terms=False):
+def test_operation(t, operation, two_terms=False):
     try:
-        class_(p)
-    except(TermError):
+        operation(p)
+    except(TypeError):
         pass
     else:
-        t.fail('`TermError` not thrown')
+        t.fail('`TypeError` not raised')
 
-    symbol = class_.symbol
-    Xpq = class_(p, q)
-    Xpqr = class_(Xpq, r)
-    Xrpq = class_(r, Xpq)
+    symbol = operation.symbol
+    Xpq = operation(p, q)
+    Xpqr = operation(Xpq, r)
+    Xrpq = operation(r, Xpq)
 
     t.assertIs(Xpq[0], p)
     t.assertIs(Xpq[1], q)
@@ -61,14 +61,16 @@ class TestExpressions(unittest.TestCase):
         self.assertTrue(parse('p -> q').equivalent_to('~p v q'))
         self.assertTrue(p.equivalent_to('p ^ (p v q)'))
         self.assertTrue(p.equivalent_to('p v (p ^ q)'))
-        self.assertTrue(p == p)
-        self.assertTrue(Apq == 'p ^ q')
+        self.assertTrue(Apq.equivalent_to('p ^ q'))
+        self.assertTrue(Apq.equivalent_to('q ^ p'))
+        self.assertTrue(Apq.equivalent_to('p ^ p ^ q ^ q'))
+        self.assertTrue(p == p == p)
+        self.assertTrue(And(p, q) == And(p, q) == Apq)
+        self.assertTrue(parse('~(p ^ q)').equivalent_to('~p v ~q'))
+        self.assertTrue(parse('~(p ^ q)') == parse('~p v ~q'))
         self.assertFalse(p.equivalent_to(q))
         self.assertFalse(parse('p -> q').equivalent_to('a -> b'))
         self.assertFalse(parse('a ^ b').equivalent_to('a v b'))
-
-    def test_similarity(self):
-        self.assertFalse(Apq.same(Opq))
 
     def test_unconditionals(self):
         self.assertTrue(T.evaluate())
@@ -110,6 +112,9 @@ class TestExpressions(unittest.TestCase):
         self.assertEquals(Jpq.evaluate(ff), False)
 
     def test_nand(self):
+        try: Nand(p, q, r)
+        except(TypeError): pass
+        else: self.fail('`TypeError` not raised')
         test_operation(self, Nand)
         self.assertEquals(Dpq.evaluate(tt), False)
         self.assertEquals(Dpq.evaluate(tf), True)
@@ -117,6 +122,9 @@ class TestExpressions(unittest.TestCase):
         self.assertEquals(Dpq.evaluate(ff), True)
 
     def test_nor(self):
+        try: Nor(p, q, r)
+        except(TypeError): pass
+        else: self.fail('`TypeError` not raised')
         test_operation(self, Nor)
         self.assertEquals(Xpq.evaluate(tt), False)
         self.assertEquals(Xpq.evaluate(tf), False)
@@ -124,6 +132,9 @@ class TestExpressions(unittest.TestCase):
         self.assertEquals(Xpq.evaluate(ff), True)
 
     def test_conditional(self):
+        try: Conditional(p, q, r)
+        except(TypeError): pass
+        else: self.fail('`TypeError` not raised')
         test_operation(self, Conditional, True)
         self.assertEquals(Cpq.evaluate(tt), True)
         self.assertEquals(Cpq.evaluate(tf), False)
@@ -137,7 +148,7 @@ class TestExpressions(unittest.TestCase):
         self.assertEquals(Epq.evaluate(ft), False)
         self.assertEquals(Epq.evaluate(ff), True)
 
-    def test_complex(self):
+    def test_stringification(self):
         # A=and  O=or  J=xor  D=nand  X=nor  C=cond  E=bicond
         self.assertEquals(str(And(Opq, Jpq)), '(p v q) ^ (p XOR q)')
         self.assertEquals(str(And(Not(Cpq), Or(Not(Dpq), Xpq))),
@@ -164,13 +175,21 @@ class TestExpressions(unittest.TestCase):
 # Parser
 # =============================================================================
 
+def test_parse_exception(t, expression):
+    try:
+        parse(expression)
+    except(SyntaxError):
+        pass
+    else:
+        self.fail('`SyntaxError` not raised')
+
 def test_parse(t, expected, *inputs):
     inputs = map(parse, inputs)
-    return t.assertTrue(all(map(expected.same, inputs)))
+    return t.assertTrue(all(map(expected.equivalent_to, inputs)))
 
 def test_parse_false(t, expected, *inputs):
     inputs = map(parse, inputs)
-    return t.assertFalse(any(map(expected.same, inputs)))
+    return t.assertFalse(any(map(expected.equivalent_to, inputs)))
 
 class TestParser(unittest.TestCase):
     def test_simple(self):
@@ -205,10 +224,14 @@ class TestParser(unittest.TestCase):
             '(p ^ q) AND r', '(p ^ q) AND r', 'p ^ (r^q)')
 
     def test_different_order(self):
-        test_parse(self, Nand(p, q, r),
-            'p|q|r', 'p|r|q', 'q|p|r', 'q|r|p', 'r|q|p', 'r|p|q')
-        test_parse(self, And(Or(p, q), r),
-            'p v q ^ r', 'q v p ^ r')
+        test_parse(self, Or(p, q, r),
+            'p v q v r', 'p v r v q', 'q v p v r', 'q v r v p', 'r v p v q', 'r v q v p')
+        test_parse(self, And(p, q, r),
+            'p ^ q ^ r', 'p ^ r ^ q', 'q ^ p ^ r', 'q ^ r ^ p', 'r ^ p ^ q', 'r ^ q ^ p')
+        test_parse(self, Xor(p, q, r),
+            'p XOR q XOR r', 'p XOR r XOR q', 'q XOR p XOR r', 'q XOR r XOR p', 'r XOR p XOR q', 'r XOR q XOR p')
+        test_parse(self, Biconditional(p, q, r),
+            'p <-> q <-> r', 'p <-> r <-> q', 'q <-> p <-> r', 'q <-> r <-> p', 'r <-> p <-> q', 'r <-> q <-> p')
 
     def test_brackets(self):
         test_parse(self, p, '(p)', '((((p))))')
@@ -221,6 +244,13 @@ class TestParser(unittest.TestCase):
         test_parse(self, Conditional(And(Cpq, p), q),
                    '((p -> q) ^ p) -> q', '((p -> q) AND p) -> q')
 
+    def test_invalid(self):
+        test_parse_exception(self, 'a ->')
+        test_parse_exception(self, 'a -> b)')
+        test_parse_exception(self, 'a -> %')
+        test_parse_exception(self, 'a -> % b')
+        test_parse_exception(self, 'a % b')
+        test_parse_exception(self, 'a ~ b')
 
 # =============================================================================
 # Truth Tables
@@ -256,9 +286,6 @@ class TestTruthTable(unittest.TestCase):
         ])
         self.assertEquals(TruthTable(T).rows, [([], t)])
         self.assertEquals(TruthTable(F).rows, [([], f)])
-
-    def test_str(self):
-        pass
 
 # =============================================================================
 # Arguments

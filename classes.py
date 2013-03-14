@@ -10,6 +10,8 @@ def _parse(expression):
 
 class Expression:
     def __eq__(self, expression):
+        if not isinstance(expression, Expression):
+            return False
         return self.equivalent_to(expression)
 
     def __len__(self):
@@ -24,9 +26,6 @@ class Expression:
     def equivalent_to(self, expression):
         expression = _parse(expression)
         return Biconditional(self, expression).is_tautology()
-
-    def same(self, expression):
-        raise NotImplementedError
 
     def is_tautology(self):
         return all(TruthTable(self).values)
@@ -51,11 +50,6 @@ class Unconditional(Expression):
     def evaluate(self, _=None):
         return self.value
 
-    def same(self, expression):
-        return (isinstance(expression, Unconditional) and
-                self.symbol == expression.symbol and
-                self.value == expression.value)
-
 T = Unconditional('T', True)
 F = Unconditional('F', False)
 
@@ -74,10 +68,6 @@ class Var(Expression):
 
     def evaluate(self, variables):
         return variables[self.name]
-
-    def same(self, expression):
-        return (isinstance(expression, Var) and
-                self.name == expression.name)
 
 class Not(Expression):
     symbol = '~'
@@ -98,22 +88,13 @@ class Not(Expression):
         term = self.term.evaluate(variables)
         return not term
 
-    def same(self, expression):
-        return (isinstance(expression, Not) and
-                self.term.same(expression.term))
-
-ONE_TERM_EXPRESSIONS = (Unconditional, Var, Not)
-
 def _wrap(expression, operation=()):
-    dont_wrap = ONE_TERM_EXPRESSIONS
+    dont_wrap = (Unconditional, Var, Not)
     if operation not in (Conditional, Biconditional):
         dont_wrap += (operation,)
     if isinstance(expression, dont_wrap):
         return '%s' % expression
     return '(%s)' % expression
-
-class TermError(Exception):
-    pass
 
 class Operation(Expression):
     def __len__(self):
@@ -130,14 +111,16 @@ class Operation(Expression):
                     names.append(name)
         return sorted(names)
 
-def operator(symbol, rule, two_terms=False):
+def operator(name, symbol, rule, n_terms=False):
     class Operation_(Operation):
         def __init__(self, *terms):
             self.terms = terms
-            if two_terms and len(terms) != 2:
-                raise TermError('Wrong number of terms (must be exactly 2)')
+            if not n_terms and len(terms) != 2:
+                raise TypeError(('the `%s` operator takes exactly 2 ' +
+                        'arguments (%d given)') % (name, len(terms)))
             elif len(terms) < 2:
-                raise TermError('Not enough terms (must be at least 2)')
+                raise TypeError('operators take at least 2 ' +
+                        'arguments (%d given)' % len(terms))
 
         def __str__(self):
             wrap = lambda term: _wrap(term, Operation_)
@@ -148,41 +131,29 @@ def operator(symbol, rule, two_terms=False):
             values = map(lambda t: t.evaluate(variables), self.terms)
             return reduce(rule, values)
 
-        def same(self, expression):
-            if (not isinstance(expression, Operation_) or
-                len(self.terms) != len(expression.terms)):
-                return False
-
-            expression_terms = list(expression.terms)
-            for term in self.terms:
-                if term in expression_terms:
-                    expression_terms.remove(term)
-                else:
-                    return False
-            return True
-
+    Operation_.__name__ = name.capitalize()
     Operation_.symbol = symbol
     return Operation_
 
-And = operator('^', lambda p, q: p and q)
-Or = operator('v', lambda p, q: p or q)
-Xor = operator('XOR', lambda p, q: not p is q)
-Nand = operator('|', lambda p, q: not (p and q))
-Nor = operator('NOR', lambda p, q: not (p or q))
-Conditional = operator('->', lambda p, q: not p or q, True)
-Biconditional = operator('<->', lambda p, q: p is q)
+And = operator('and', '^', lambda p, q: p and q, True)
+Or = operator('or', 'v', lambda p, q: p or q, True)
+Xor = operator('xor', 'XOR', lambda p, q: not p is q, True)
+Nand = operator('nand', '|', lambda p, q: not (p and q))
+Nor = operator('nor', 'NOR', lambda p, q: not (p or q))
+Conditional = operator('conditional', '->', lambda p, q: not p or q)
+Biconditional = operator('biconditional', '<->', lambda p, q: p is q, True)
 
 def get_operation(symbol):
     operations = {
-        'AND': And, '^': And,
-        'OR': Or, 'V': Or,
-        'XOR': Xor,
-        'NAND': Nand, '|': Nand,
-        'NOR': Nor,
+        'and': And, '^': And,
+        'or': Or, 'v': Or,
+        'xor': Xor,
+        'nand': Nand, '|': Nand,
+        'nor': Nor,
         '->': Conditional,
         '<->': Biconditional
     }
-    symbol = symbol.upper()
+    symbol = symbol.lower()
     if symbol not in operations:
         raise Exception('Invalid symbol')
     return operations[symbol]

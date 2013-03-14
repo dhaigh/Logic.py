@@ -1,7 +1,6 @@
 Todo:
 - parser to recognise order of ops
-- more parser tests
-- more tests for other new methods (same/len) / more exceptions generally (e.g. TermError)
+- test for __len__
 
 FUTURE:
 - show working steps?

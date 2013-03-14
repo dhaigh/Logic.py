@@ -23,7 +23,7 @@ def expected(expected, saw):
         saw = 'EOE'
     else:
         saw = '`%s`' % saw
-    raise SyntaxError('Expected %s, saw %s' % (expected, saw))
+    raise SyntaxError('expected %s, saw %s' % (expected, saw))
 
 def parse(expression):
     return Parser(tokenize(expression)).parse()
@@ -88,4 +88,4 @@ class Parser:
                 toks.append(tok)
             return Parser(toks).parse()
 
-        expected('a term', token)
+        expected('a term or expression', token)
