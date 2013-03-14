@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 
-import unittest2
+import unittest
 from logic import *
 
 p, q, r = Var('p'), Var('q'), Var('r')
@@ -44,7 +44,7 @@ def test_operation(t, class_, two_terms=False):
         t.assertEquals(str(Xrpq), 'r %s p %s q' % (symbol, symbol))
     t.assertEquals(Xpq.get_names(), ['p', 'q'])
 
-class TestExpressions(unittest2.TestCase):
+class TestExpressions(unittest.TestCase):
     def test_tautology(self):
         self.assertTrue(Conditional(And(Conditional(p, q), p), p).is_tautology())
         self.assertTrue(Or(p, Np).is_tautology())
@@ -172,7 +172,7 @@ def test_parse_false(t, expected, *inputs):
     inputs = map(parse, inputs)
     return t.assertFalse(any(map(expected.same, inputs)))
 
-class TestParser(unittest2.TestCase):
+class TestParser(unittest.TestCase):
     def test_simple(self):
         test_parse(self, p, 'p')
         test_parse(self, Np, '~p')
@@ -230,7 +230,7 @@ tt_p = TruthTable(p)
 tt_Apq = TruthTable(Apq)
 tt_Apqr = TruthTable(And(Apq, r))
 
-class TestTruthTable(unittest2.TestCase):
+class TestTruthTable(unittest.TestCase):
     def test_init(self):
         self.assertIs(tt_p.expression, p)
         self.assertIs(tt_Apq.expression, Apq)
@@ -264,7 +264,7 @@ class TestTruthTable(unittest2.TestCase):
 # Arguments
 # =============================================================================
 
-class TestArguments(unittest2.TestCase):
+class TestArguments(unittest.TestCase):
     def test_init(self):
         arg = Argument([p, q, r], r)
         self.assertEquals(arg.propositions, [p, q, r])
@@ -279,4 +279,4 @@ class TestArguments(unittest2.TestCase):
         self.assertIs(arg3.is_valid(), False)
 
 if __name__ == '__main__':
-    unittest2.main()
+    unittest.main()
