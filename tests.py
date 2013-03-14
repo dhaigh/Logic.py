@@ -45,6 +45,37 @@ def test_operation(t, operation, two_terms=False):
     t.assertEquals(Xpq.get_names(), ['p', 'q'])
 
 class TestExpressions(unittest.TestCase):
+    def test_len(self):
+        self.assertEquals(len(Apq), 2)
+        self.assertEquals(len(p), 1)
+        self.assertEquals(len(T), 1)
+        self.assertEquals(len(F), 1)
+        self.assertEquals(len(Np), 1)
+        self.assertEquals(len(And(p, q, r)), 3)
+
+    def test_stringification(self):
+        # A=and  O=or  J=xor  D=nand  X=nor  C=cond  E=bicond
+        self.assertEquals(str(And(Opq, Jpq)), '(p v q) ^ (p XOR q)')
+        self.assertEquals(str(And(Not(Cpq), Or(Not(Dpq), Xpq))),
+                '~(p -> q) ^ (~(p | q) v (p NOR q))')
+        self.assertEquals(str(
+                And(
+                  Or(
+                    Xor(
+                      Nand(
+                        Nor(
+                          Conditional(
+                            Biconditional(p, p),
+                            p),
+                          p),
+                        p),
+                      p),
+                    p),
+                  p)),
+                '((((((p <-> p) -> p) NOR p) | p) XOR p) v p) ^ p')
+        self.assertEquals(str(And(p, And(q, And(r, And(Nor(p, Nor(q, r)), Not(q)))))),
+                'p ^ q ^ r ^ (p NOR q NOR r) ^ ~q')
+
     def test_tautology(self):
         self.assertTrue(Conditional(And(Conditional(p, q), p), p).is_tautology())
         self.assertTrue(Or(p, Np).is_tautology())
@@ -147,29 +178,6 @@ class TestExpressions(unittest.TestCase):
         self.assertEquals(Epq.evaluate(tf), False)
         self.assertEquals(Epq.evaluate(ft), False)
         self.assertEquals(Epq.evaluate(ff), True)
-
-    def test_stringification(self):
-        # A=and  O=or  J=xor  D=nand  X=nor  C=cond  E=bicond
-        self.assertEquals(str(And(Opq, Jpq)), '(p v q) ^ (p XOR q)')
-        self.assertEquals(str(And(Not(Cpq), Or(Not(Dpq), Xpq))),
-                '~(p -> q) ^ (~(p | q) v (p NOR q))')
-        self.assertEquals(str(
-                And(
-                  Or(
-                    Xor(
-                      Nand(
-                        Nor(
-                          Conditional(
-                            Biconditional(p, p),
-                            p),
-                          p),
-                        p),
-                      p),
-                    p),
-                  p)),
-                '((((((p <-> p) -> p) NOR p) | p) XOR p) v p) ^ p')
-        self.assertEquals(str(And(p, And(q, And(r, And(Nor(p, Nor(q, r)), Not(q)))))),
-                'p ^ q ^ r ^ (p NOR q NOR r) ^ ~q')
 
 # =============================================================================
 # Parser

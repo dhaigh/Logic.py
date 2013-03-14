@@ -1,6 +1,5 @@
 Todo:
 - parser to recognise order of ops
-- test for __len__
 
 FUTURE:
 - show working steps?
