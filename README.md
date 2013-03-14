@@ -1,4 +1,4 @@
-Logic
-=====
+Logic.py
+========
 
-Propositional logic and related stuffs
+Propositional logic and related stuffs.
