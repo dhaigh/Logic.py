@@ -23,14 +23,14 @@ ff = {'p': False, 'q': False}
 # Operations
 # =============================================================================
 
-def test_operation(t, operation, two_terms=False):
+def test_operation(t, operation):
     try:
         operation(p)
     except(TypeError):
         pass
     else:
         t.fail('`TypeError` not raised')
-
+    
     symbol = operation.symbol
     Xpq = operation(p, q)
     Xpqr = operation(Xpq, r)
@@ -39,10 +39,18 @@ def test_operation(t, operation, two_terms=False):
     t.assertIs(Xpq[0], p)
     t.assertIs(Xpq[1], q)
     t.assertEquals(str(Xpq), 'p %s q' % symbol)
-    if not two_terms:
+    t.assertEquals(Xpq.get_names(), ['p', 'q'])
+
+    if operation.associative:
         t.assertEquals(str(Xpqr), 'p %s q %s r' % (symbol, symbol))
         t.assertEquals(str(Xrpq), 'r %s p %s q' % (symbol, symbol))
-    t.assertEquals(Xpq.get_names(), ['p', 'q'])
+    else:
+        try:
+            operation(p, q, r)
+        except(TypeError):
+            pass
+        else:
+            self.fail('`TypeError` not raised')
 
 class TestExpressions(unittest.TestCase):
     def test_len(self):
@@ -74,7 +82,7 @@ class TestExpressions(unittest.TestCase):
                   p)),
                 '((((((p <-> p) -> p) NOR p) | p) XOR p) v p) ^ p')
         self.assertEquals(str(And(p, And(q, And(r, And(Nor(p, Nor(q, r)), Not(q)))))),
-                'p ^ q ^ r ^ (p NOR q NOR r) ^ ~q')
+                'p ^ q ^ r ^ (p NOR (q NOR r)) ^ ~q')
 
     def test_tautology(self):
         self.assertTrue(Conditional(And(Conditional(p, q), p), p).is_tautology())
@@ -143,9 +151,6 @@ class TestExpressions(unittest.TestCase):
         self.assertEquals(Jpq.evaluate(ff), False)
 
     def test_nand(self):
-        try: Nand(p, q, r)
-        except(TypeError): pass
-        else: self.fail('`TypeError` not raised')
         test_operation(self, Nand)
         self.assertEquals(Dpq.evaluate(tt), False)
         self.assertEquals(Dpq.evaluate(tf), True)
@@ -153,9 +158,6 @@ class TestExpressions(unittest.TestCase):
         self.assertEquals(Dpq.evaluate(ff), True)
 
     def test_nor(self):
-        try: Nor(p, q, r)
-        except(TypeError): pass
-        else: self.fail('`TypeError` not raised')
         test_operation(self, Nor)
         self.assertEquals(Xpq.evaluate(tt), False)
         self.assertEquals(Xpq.evaluate(tf), False)
@@ -163,17 +165,14 @@ class TestExpressions(unittest.TestCase):
         self.assertEquals(Xpq.evaluate(ff), True)
 
     def test_conditional(self):
-        try: Conditional(p, q, r)
-        except(TypeError): pass
-        else: self.fail('`TypeError` not raised')
-        test_operation(self, Conditional, True)
+        test_operation(self, Conditional)
         self.assertEquals(Cpq.evaluate(tt), True)
         self.assertEquals(Cpq.evaluate(tf), False)
         self.assertEquals(Cpq.evaluate(ft), True)
         self.assertEquals(Cpq.evaluate(ff), True)
 
     def test_biconditional(self):
-        test_operation(self, Biconditional, True)
+        test_operation(self, Biconditional)
         self.assertEquals(Epq.evaluate(tt), True)
         self.assertEquals(Epq.evaluate(tf), False)
         self.assertEquals(Epq.evaluate(ft), False)

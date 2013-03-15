@@ -87,11 +87,10 @@ class Not(Expression):
         term = self.term.evaluate(variables)
         return not term
 
-def _wrap(expression, operation=()):
-    dont_wrap = (Unconditional, Var, Not)
-    if operation not in (Conditional, Biconditional):
-        dont_wrap += (operation,)
-    if isinstance(expression, dont_wrap):
+def _wrap(expression, op=None):
+    if (isinstance(expression, (Unconditional, Var, Not)) or
+        (op and op.associative and
+         isinstance(expression, op))):
         return '%s' % expression
     return '(%s)' % expression
 
@@ -267,8 +266,7 @@ class Parser(object):
                 expected('an operation or EOE', token)
 
             new_op = get_operation(token)
-            if ((op is new_op is Conditional) or
-                (op and op is not new_op)):
+            if op and op is not new_op:
                 self.terms = [op(*self.terms)]
             self.operation = new_op
 
