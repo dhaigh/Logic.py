@@ -1,8 +1,9 @@
 Todo:
 - parser to recognise order of ops
+- test binary op. append (and make sure it throws an exception is non-associative)
 
 FUTURE:
-- tests for all global objects (e.g. wrap, bool_permuatations)
+- tests for all global objects (e.g. wrap, bool_permuatations, operator (making new operators, testing stringification for order etc.))
 - show working steps?
 - CLI + GUI
 - simplifier

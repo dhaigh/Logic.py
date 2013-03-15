@@ -68,7 +68,22 @@ class Var(Expression):
     def evaluate(self, variables):
         return variables[self.name]
 
-class Not(Expression):
+def wrap(term, op=None):
+    if (
+        # never put brackets around T/F, p, or ~p
+        not isinstance(term, BinaryOperation) or
+        # operations with higher precedence
+        # (op and op.precedence > type(term).precedence) or
+        # associative operations of the same type
+        (op and op.associative and
+         isinstance(term, op))):
+        return '%s' % term
+    return '(%s)' % term
+
+class Operation(Expression):
+    pass
+
+class Not(Operation):
     symbol = '~'
 
     def __init__(self, term):
@@ -87,19 +102,15 @@ class Not(Expression):
         term = self.term.evaluate(variables)
         return not term
 
-def wrap(expression, op=None):
-    if (isinstance(expression, (Unconditional, Var, Not)) or
-        (op and op.associative and
-         isinstance(expression, op))):
-        return '%s' % expression
-    return '(%s)' % expression
-
-class Operation(Expression):
+class BinaryOperation(Operation):
     def __len__(self):
         return len(self.terms)
 
     def __getitem__(self, index):
         return self.terms[index]
+
+    def append(self, term):
+        self.terms.append(term)
 
     def get_names(self):
         names = []
@@ -109,10 +120,11 @@ class Operation(Expression):
                     names.append(name)
         return sorted(names)
 
-def operator(name, symbol, rule, associative=False):
-    class Operation_(Operation):
+
+def operator(name, symbol, rule, associative=False, precedence=1):
+    class Operation_(BinaryOperation):
         def __init__(self, *terms):
-            self.terms = terms
+            self.terms = list(terms)
             if not associative and len(terms) != 2:
                 raise TypeError(('the %s operator only takes 2 ' +
                         'arguments (%d given) because it is not ' +
@@ -132,6 +144,7 @@ def operator(name, symbol, rule, associative=False):
 
     Operation_.__name__ = name
     Operation_.associative = associative
+    Operation_.precedence = precedence
     Operation_.symbol = symbol
     return Operation_
 
@@ -140,8 +153,8 @@ Or = operator('Or', 'v', lambda p, q: p or q, True)
 Xor = operator('Xor', 'XOR', lambda p, q: p is not q, True)
 Nand = operator('Nand', '|', lambda p, q: not (p and q))
 Nor = operator('Nor', 'NOR', lambda p, q: not (p or q))
-Conditional = operator('Conditional', '->', lambda p, q: not p or q)
-Biconditional = operator('Biconditional', '<->', lambda p, q: p is q, True)
+Conditional = operator('Conditional', '->', lambda p, q: not p or q, False, 2)
+Biconditional = operator('Biconditional', '<->', lambda p, q: p is q, True, 2)
 
 def get_operation(symbol):
     operations = {
@@ -250,25 +263,28 @@ class Parser(object):
 
     def parse(self):
         while True:
-            term = self.next_term()
-            op = self.operation
-            if ((op is None and isinstance(term, Operation)) or
-                (op and isinstance(term, op) and op.associative)):
-                self.terms.extend(term.terms)
-                self.operation = op = type(term)
-            else:
-                self.terms.append(term)
-
+            self.terms.append(self.next_term())
             token = self.read()
             if token is None:
                 break
             if not isoperation(token):
                 expected('an operation or EOE', token)
 
+            op = self.operation
             new_op = get_operation(token)
-            if op and op is not new_op:
+            if len(self.terms) == 1 and isinstance(self.terms[0], BinaryOperation) and \
+                type(self.terms[0]).precedence < new_op.precedence:
+                self.terms.append(parse(self.tokens))
+                return new_op(*self.terms)
+            elif not op:
+                self.operation = new_op
+            elif new_op.precedence > op.precedence:
                 self.terms = [op(*self.terms)]
-            self.operation = new_op
+                self.terms.append(parse(self.tokens))
+                return new_op(*self.terms)
+            elif op is not new_op:
+                self.terms = [op(*self.terms)]
+                self.operation = new_op
 
         if self.operation is None:
             return self.terms[0]

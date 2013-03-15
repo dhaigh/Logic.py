@@ -33,8 +33,6 @@ def test_operation(t, operation):
     
     symbol = operation.symbol
     Xpq = operation(p, q)
-    Xpqr = operation(Xpq, r)
-    Xrpq = operation(r, Xpq)
 
     t.assertIs(Xpq[0], p)
     t.assertIs(Xpq[1], q)
@@ -42,6 +40,8 @@ def test_operation(t, operation):
     t.assertEquals(Xpq.get_names(), ['p', 'q'])
 
     if operation.associative:
+        Xpqr = operation(p, q, r)
+        Xrpq = operation(r, p, q)
         t.assertEquals(str(Xpqr), 'p %s q %s r' % (symbol, symbol))
         t.assertEquals(str(Xrpq), 'r %s p %s q' % (symbol, symbol))
     else:
@@ -83,6 +83,9 @@ class TestExpressions(unittest.TestCase):
                 '((((((p <-> p) -> p) NOR p) | p) XOR p) v p) ^ p')
         self.assertEquals(str(And(p, And(q, And(r, And(Nor(p, Nor(q, r)), Not(q)))))),
                 'p ^ q ^ r ^ (p NOR (q NOR r)) ^ ~q')
+        self.assertEquals(str(Biconditional(Apq, Opq)), '(p ^ q) <-> (p v q)')
+        self.assertEquals(str(Biconditional(And(p, q, r), Opq)), '(p ^ q ^ r) <-> (p v q)')
+        self.assertEquals(str(Biconditional(And(Apq, r), Opq)), '(p ^ q ^ r) <-> (p v q)')
 
     def test_tautology(self):
         self.assertTrue(Conditional(And(Conditional(p, q), p), p).is_tautology())
