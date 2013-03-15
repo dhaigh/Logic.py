@@ -78,7 +78,7 @@ class Not(Expression):
         return 1
 
     def __str__(self):
-        return '~%s' % _wrap(self.term)
+        return '~%s' % wrap(self.term)
 
     def get_names(self):
         return self.term.get_names()
@@ -87,7 +87,7 @@ class Not(Expression):
         term = self.term.evaluate(variables)
         return not term
 
-def _wrap(expression, op=None):
+def wrap(expression, op=None):
     if (isinstance(expression, (Unconditional, Var, Not)) or
         (op and op.associative and
          isinstance(expression, op))):
@@ -122,8 +122,8 @@ def operator(name, symbol, rule, associative=False):
                         'arguments (%d given)' % len(terms))
 
         def __str__(self):
-            wrap = lambda term: _wrap(term, Operation_)
-            terms = map(wrap, self.terms)
+            wrap_ = lambda term: wrap(term, Operation_)
+            terms = map(wrap_, self.terms)
             return (' %s ' % symbol).join(terms)
 
         def evaluate(self, variables):

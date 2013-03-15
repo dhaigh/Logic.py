@@ -2,6 +2,7 @@ Todo:
 - parser to recognise order of ops
 
 FUTURE:
+- tests for all global objects (e.g. wrap, bool_permuatations)
 - show working steps?
 - CLI + GUI
 - simplifier
