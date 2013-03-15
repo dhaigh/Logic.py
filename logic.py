@@ -4,7 +4,7 @@ import re
 # Expressions
 # =============================================================================
 
-class Expression:
+class Expression(object):
     def __eq__(self, expression):
         if not isinstance(expression, Expression):
             return False
@@ -175,7 +175,7 @@ def bool_permutations(n):
             perms.append([value] + perm)
     return perms
 
-class TruthTable:
+class TruthTable(object):
     def __init__(self, expression):
         self.expression = parse(expression)
         self.variables = self.expression.get_names()
@@ -236,7 +236,7 @@ def parse(expression):
         expression = tokenize(expression)
     return Parser(expression).parse()
 
-class Parser:
+class Parser(object):
     def __init__(self, tokens):
         self.tokens = tokens
         self.terms = []
@@ -254,7 +254,7 @@ class Parser:
             if ((op is None and isinstance(term, Operation)) or
                 (op and isinstance(term, op))):
                 self.terms.extend(term.terms)
-                self.operation = op = term.__class__
+                self.operation = op = type(term)
             else:
                 self.terms.append(term)
 
