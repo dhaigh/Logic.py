@@ -226,16 +226,15 @@ def isoperation(token):
     return operation_re.match(token)
 
 def expected(expected, saw=None):
-    if saw is None:
-        saw = 'EOE'
-    else:
-        saw = '`%s`' % saw
+    saw = 'EOE' if saw is None else '`%s`' % saw
     raise SyntaxError('expected %s, saw %s' % (expected, saw))
 
 def parse(expression):
     if isinstance(expression, Expression):
         return expression
-    return Parser(tokenize(expression)).parse()
+    if isinstance(expression, str):
+        expression = tokenize(expression)
+    return Parser(expression).parse()
 
 class Parser:
     def __init__(self, tokens):
@@ -298,6 +297,6 @@ class Parser:
             else:
                 expected('an operation or `)`')
 
-            return Parser(toks).parse()
+            return parse(toks)
 
-        expected('a term or expression', token)
+        expected('a variable, `~`, or `(`', token)
