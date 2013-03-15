@@ -110,15 +110,15 @@ class Operation(Expression):
                     names.append(name)
         return sorted(names)
 
-def operator(name, symbol, rule, n_terms=False):
+def operator(name, symbol, rule, associative=False):
     class Operation_(Operation):
         def __init__(self, *terms):
             self.terms = terms
-            if not n_terms and len(terms) != 2:
-                raise TypeError(('the `%s` operator takes exactly 2 ' +
-                        'arguments (%d given)') % (name, len(terms)))
+            if not associative and len(terms) != 2:
+                raise TypeError(('the `%s` operator only takes 2 arguments ' +
+                        'because it is not associative') % (name, len(terms)))
             elif len(terms) < 2:
-                raise TypeError('operators take at least 2 ' +
+                raise TypeError('binary operators take at least 2 ' +
                         'arguments (%d given)' % len(terms))
 
         def __str__(self):
@@ -136,7 +136,7 @@ def operator(name, symbol, rule, n_terms=False):
 
 And = operator('and', '^', lambda p, q: p and q, True)
 Or = operator('or', 'v', lambda p, q: p or q, True)
-Xor = operator('xor', 'XOR', lambda p, q: not p is q, True)
+Xor = operator('xor', 'XOR', lambda p, q: p is not q, True)
 Nand = operator('nand', '|', lambda p, q: not (p and q))
 Nor = operator('nor', 'NOR', lambda p, q: not (p or q))
 Conditional = operator('conditional', '->', lambda p, q: not p or q)
@@ -225,7 +225,7 @@ def isoperation(token):
         return None
     return operation_re.match(token)
 
-def expected(expected, saw):
+def expected(expected, saw=None):
     if saw is None:
         saw = 'EOE'
     else:
@@ -295,6 +295,9 @@ class Parser:
                         break
                     depth -= 1
                 toks.append(tok)
+            else:
+                expected('an operation or `)`')
+
             return Parser(toks).parse()
 
         expected('a term or expression', token)
