@@ -115,8 +115,9 @@ def operator(name, symbol, rule, associative=False):
         def __init__(self, *terms):
             self.terms = terms
             if not associative and len(terms) != 2:
-                raise TypeError(('the `%s` operator only takes 2 arguments ' +
-                        'because it is not associative') % (name, len(terms)))
+                raise TypeError(('the %s operator only takes 2 ' +
+                        'arguments (%d given) because it is not ' +
+                        'associative') % (name, len(terms)))
             elif len(terms) < 2:
                 raise TypeError('binary operators take at least 2 ' +
                         'arguments (%d given)' % len(terms))
@@ -130,17 +131,18 @@ def operator(name, symbol, rule, associative=False):
             values = map(lambda t: t.evaluate(variables), self.terms)
             return reduce(rule, values)
 
-    Operation_.__name__ = name.capitalize()
+    Operation_.__name__ = name
+    Operation_.associative = associative
     Operation_.symbol = symbol
     return Operation_
 
-And = operator('and', '^', lambda p, q: p and q, True)
-Or = operator('or', 'v', lambda p, q: p or q, True)
-Xor = operator('xor', 'XOR', lambda p, q: p is not q, True)
-Nand = operator('nand', '|', lambda p, q: not (p and q))
-Nor = operator('nor', 'NOR', lambda p, q: not (p or q))
-Conditional = operator('conditional', '->', lambda p, q: not p or q)
-Biconditional = operator('biconditional', '<->', lambda p, q: p is q, True)
+And = operator('And', '^', lambda p, q: p and q, True)
+Or = operator('Or', 'v', lambda p, q: p or q, True)
+Xor = operator('Xor', 'XOR', lambda p, q: p is not q, True)
+Nand = operator('Nand', '|', lambda p, q: not (p and q))
+Nor = operator('Nor', 'NOR', lambda p, q: not (p or q))
+Conditional = operator('Conditional', '->', lambda p, q: not p or q)
+Biconditional = operator('Biconditional', '<->', lambda p, q: p is q, True)
 
 def get_operation(symbol):
     operations = {
@@ -252,7 +254,7 @@ class Parser(object):
             term = self.next_term()
             op = self.operation
             if ((op is None and isinstance(term, Operation)) or
-                (op and isinstance(term, op))):
+                (op and isinstance(term, op) and op.associative)):
                 self.terms.extend(term.terms)
                 self.operation = op = type(term)
             else:
