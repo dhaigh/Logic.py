@@ -125,13 +125,13 @@ def operator(name, symbol, rule, associative=False, precedence=1):
     class Operation_(BinaryOperation):
         def __init__(self, *terms):
             self.terms = list(terms)
-            if not associative and len(terms) != 2:
+            if len(terms) < 2:
+                raise TypeError('binary operators take at least 2 ' +
+                        'arguments (%d given)' % len(terms))
+            if not associative and len(terms) > 2:
                 raise TypeError(('the %s operator only takes 2 ' +
                         'arguments (%d given) because it is not ' +
                         'associative') % (name, len(terms)))
-            elif len(terms) < 2:
-                raise TypeError('binary operators take at least 2 ' +
-                        'arguments (%d given)' % len(terms))
 
         def __str__(self):
             wrap_ = lambda term: wrap(term, Operation_)
@@ -263,7 +263,8 @@ class Parser(object):
 
     def parse(self):
         while True:
-            self.terms.append(self.next_term())
+            term = self.next_term()
+            self.terms.append(term)
             token = self.read()
             if token is None:
                 break
@@ -272,8 +273,8 @@ class Parser(object):
 
             op = self.operation
             new_op = get_operation(token)
-            if len(self.terms) == 1 and isinstance(self.terms[0], BinaryOperation) and \
-                type(self.terms[0]).precedence < new_op.precedence:
+            if not op and isinstance(term, BinaryOperation) and \
+                type(term).precedence < new_op.precedence:
                 self.terms.append(parse(self.tokens))
                 return new_op(*self.terms)
             elif not op:

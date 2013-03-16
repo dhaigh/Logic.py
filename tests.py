@@ -5,6 +5,8 @@ from logic import *
 
 p, q, r = Var('p'), Var('q'), Var('r')
 
+# A=and  O=or  J=xor  D=nand  X=nor  C=cond  E=bicond
+
 Np = Not(p)
 Apq = And(p, q)
 Opq = Or(p, q)
@@ -30,7 +32,7 @@ def test_operation(t, operation):
         pass
     else:
         t.fail('`TypeError` not raised')
-    
+
     symbol = operation.symbol
     Xpq = operation(p, q)
 
@@ -62,7 +64,6 @@ class TestExpressions(unittest.TestCase):
         self.assertEquals(len(And(p, q, r)), 3)
 
     def test_stringification(self):
-        # A=and  O=or  J=xor  D=nand  X=nor  C=cond  E=bicond
         self.assertEquals(str(And(Opq, Jpq)), '(p v q) ^ (p XOR q)')
         self.assertEquals(str(And(Not(Cpq), Or(Not(Dpq), Xpq))),
                 '~(p -> q) ^ (~(p | q) v (p NOR q))')
@@ -188,10 +189,10 @@ class TestExpressions(unittest.TestCase):
 def test_parse_exception(t, expression):
     try:
         parse(expression)
-    except(SyntaxError):
+    except(SyntaxError, TypeError):
         pass
     else:
-        self.fail('`SyntaxError` not raised')
+        self.fail('`SyntaxError` or `TypeError` not raised')
 
 def test_parse(t, expected, *inputs):
     inputs = map(parse, inputs)
@@ -199,7 +200,7 @@ def test_parse(t, expected, *inputs):
 
 def test_parse_false(t, expected, *inputs):
     inputs = map(parse, inputs)
-    return t.assertFalse(any(map(expected.equivalent_to, inputs)))
+    return t.assertFalse(all(map(expected.equivalent_to, inputs)))
 
 class TestParser(unittest.TestCase):
     def test_simple(self):
@@ -233,15 +234,52 @@ class TestParser(unittest.TestCase):
             'p ^ q ^ r', 'p ^ q AND r', 'p AND q AND r',
             '(p ^ q) AND r', '(p ^ q) AND r', 'p ^ (r^q)')
 
-    def test_different_order(self):
-        test_parse(self, Or(p, q, r),
-            'p v q v r', 'p v r v q', 'q v p v r', 'q v r v p', 'r v p v q', 'r v q v p')
+    def test_associativity(self):
+        test_parse(self, And(Apq, r),
+            'p ^ q ^ r', 'p ^ (q ^ r)')
+        test_parse(self, Or(Opq, r),
+            'p v q v r', 'p v (q v r)')
+        test_parse(self, Xor(Jpq, r),
+            'p XOR q XOR r', 'p XOR (q XOR r)')
+        test_parse_false(self, Nand(Dpq, r),
+            'p | (q | r)')
+        test_parse_false(self, Nor(Xpq, r),
+            'p NOR (q NOR r)')
+        test_parse_exception(self, 'p | q | r')
+        test_parse_exception(self, 'p NOR q NOR r')
+        test_parse_exception(self, 'p -> q -> r')
+
+    def test_commutativity(self):
+        test_parse(self, Apq, 'p ^ q', 'q ^ p')
+        test_parse(self, Opq, 'p v q', 'q v p')
+        test_parse(self, Jpq, 'p XOR q', 'q XOR p')
+        test_parse(self, Dpq, 'p | q', 'q | p')
+        test_parse(self, Xpq, 'p NOR q', 'q NOR p')
+        test_parse(self, Epq, 'p <-> q', 'q <-> p')
+        test_parse_false(self, Cpq, 'q -> p')
         test_parse(self, And(p, q, r),
             'p ^ q ^ r', 'p ^ r ^ q', 'q ^ p ^ r', 'q ^ r ^ p', 'r ^ p ^ q', 'r ^ q ^ p')
+        test_parse(self, Or(p, q, r),
+            'p v q v r', 'p v r v q', 'q v p v r', 'q v r v p', 'r v p v q', 'r v q v p')
         test_parse(self, Xor(p, q, r),
             'p XOR q XOR r', 'p XOR r XOR q', 'q XOR p XOR r', 'q XOR r XOR p', 'r XOR p XOR q', 'r XOR q XOR p')
         test_parse(self, Biconditional(p, q, r),
             'p <-> q <-> r', 'p <-> r <-> q', 'q <-> p <-> r', 'q <-> r <-> p', 'r <-> p <-> q', 'r <-> q <-> p')
+
+    def test_precedence(self):
+        test_parse(self, Conditional(p, Opq),
+            'p -> p v q', '(p) -> (p) v (q)')
+        test_parse(self, Conditional(Cpq, Epq),
+            '(p -> q) -> (p <-> q)', '(p -> q) -> ((p) <-> (q))')
+        test_parse(self, Conditional(Conditional(p, Cpq), q),
+            '(p -> (p -> q)) -> q')
+        test_parse(self, Conditional(Or(p, q, r),
+            Xor(Xor(Biconditional(p, r), q),
+                Conditional(
+                    And(r, And(Nand(r, p), Var('z'))),
+                    Not(Conditional(Or(Var('x'), r),
+                                    Biconditional(Var('b'), r)))))),
+            'p v q v r -> (p <-> r) xor q xor (r ^ (r|p and z) -> ~(x v r -> (b <-> r)))')
 
     def test_brackets(self):
         test_parse(self, p, '(p)', '((((p))))')
