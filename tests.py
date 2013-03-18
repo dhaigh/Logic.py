@@ -192,7 +192,7 @@ def test_parse_exception(t, expression):
     except(SyntaxError, TypeError):
         pass
     else:
-        self.fail('`SyntaxError` or `TypeError` not raised')
+        t.fail('`SyntaxError` or `TypeError` not raised')
 
 def test_parse(t, expected, *inputs):
     inputs = map(parse, inputs)

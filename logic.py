@@ -1,6 +1,127 @@
 import re
 
 # =============================================================================
+# Parser
+# =============================================================================
+
+lexer_re = re.compile(r'[a-zA-Z]\w*|[~\^()\|]|->|<->|\S+?')
+var_re = re.compile(r'^[a-zA-Z]\w*$')
+operation_re = re.compile(r'^(?:[\^v\|]|AND|OR|XOR|NAND|NOR|->|<->)$', re.I)
+
+def tokenize(expression):
+	return lexer_re.findall(expression)
+
+def isvar(token):
+    if token is None:
+        return None
+    return var_re.match(token)
+
+def isoperation(token):
+    if token is None:
+        return None
+    return operation_re.match(token)
+
+def expected(expected, saw=None):
+    saw = 'EOE' if saw is None else '`%s`' % saw
+    raise SyntaxError('expected %s, saw %s' % (expected, saw))
+
+def parse(expression):
+    if isinstance(expression, Expression):
+        return expression
+    if isinstance(expression, str):
+        expression = tokenize(expression)
+    return Parser(expression).parse()
+
+class Parser(object):
+    def __init__(self, tokens):
+        self.tokens = tokens
+        self.i = 0
+        self.terms = []
+        self.operation = None
+        self.expression = self.parse()
+
+    def read(self):
+        if self.i < len(self.tokens):
+            self.i += 1
+            return self.tokens[self.i-1]
+        return None
+
+    def parse(self):
+        while True:
+            term = self.next_term()
+            token = self.read()
+            if token is None:
+                self.terms.append(term)
+                break
+            if not isoperation(token):
+                expected('an operation or EOE', token)
+
+            next_op = get_operation(token)
+            op = self.operation
+            if op:
+                if op is next_op:
+                    self.terms.append(term)
+                elif next_op.higher(op):
+                    print term
+                else:
+                    self.terms.append(term)
+                    self.terms = [op(*self.terms)]
+            else:
+                self.terms.append(term)
+
+            self.operation = next_op
+            '''
+            if not op and isinstance(term, BinaryOperation) and \
+                type(term).precedence < new_op.precedence:
+                self.terms.append(parse(self.tokens))
+                return new_op(*self.terms)
+            elif not op:
+                self.operation = new_op
+            elif new_op.precedence > op.precedence:
+                self.terms = [op(*self.terms)]
+                self.terms.append(parse(self.tokens))
+                return new_op(*self.terms)
+            elif op is not new_op:
+                self.terms = [op(*self.terms)]
+                self.operation = new_op
+            '''
+
+        if self.operation is None:
+            return self.terms[0]
+        return self.operation(*self.terms)
+
+
+    def next_term(self):
+        token = self.read()
+
+        if token is None:
+            return None
+
+        if isvar(token):
+            return Var(token)
+
+        if token == '~':
+            return Not(self.next_term())
+
+        if token == '(':
+            toks, depth = [], 1
+            while self.tokens:
+                tok = self.read()
+                if tok == '(':
+                    depth += 1
+                elif tok == ')':
+                    if depth == 1:
+                        break
+                    depth -= 1
+                toks.append(tok)
+            else:
+                expected('an operation or `)`')
+
+            return parse(toks)
+
+        expected('a variable, `~`, or `(`', token)
+
+# =============================================================================
 # Expressions
 # =============================================================================
 
@@ -26,6 +147,9 @@ class Expression(object):
         expression = parse(expression)
         return Biconditional(self, expression).is_tautology()
 
+    def identical(self, expression):
+        raise NotImplementedError
+
     def is_contradiction(self):
         return not any(TruthTable(self).values)
 
@@ -49,6 +173,12 @@ class Unconditional(Expression):
     def evaluate(self, _=None):
         return self.value
 
+    def identical(self, expression):
+        expression = parse(expression)
+        if not isinstance(expression, Var):
+            return False
+        return expression.value == self.value
+
 T = Unconditional('T', True)
 F = Unconditional('F', False)
 
@@ -68,9 +198,17 @@ class Var(Expression):
     def evaluate(self, variables):
         return variables[self.name]
 
+    def identical(self, expression):
+        expression = parse(expression)
+        if not isinstance(expression, Var):
+            return False
+        return expression.name == self.name
+
 def wrap(term, op=None):
-    if (
-        # never put brackets around T/F, p, or ~p
+    if not isinstance(term, BinaryOperation):
+        return str(term)
+    return '(%s)' % term
+    if (# never put brackets around T/F, p, or ~p
         not isinstance(term, BinaryOperation) or
         # operations with higher precedence
         # (op and op.precedence > type(term).precedence) or
@@ -87,6 +225,7 @@ class Not(Operation):
     symbol = '~'
 
     def __init__(self, term):
+        term = parse(term)
         self.term = term
 
     def __len__(self):
@@ -102,12 +241,20 @@ class Not(Operation):
         term = self.term.evaluate(variables)
         return not term
 
-class BinaryOperation(Operation):
-    def __len__(self):
-        return len(self.terms)
+    def identical(self, expression):
+        return isinstance(expression, Not) and \
+               self.term.identical(expression)
 
+class BinaryOperation(Operation):
     def __getitem__(self, index):
         return self.terms[index]
+
+    def __iter__(self):
+        for term in self.terms:
+            yield term
+
+    def __len__(self):
+        return len(self.terms)
 
     def append(self, term):
         self.terms.append(term)
@@ -120,11 +267,10 @@ class BinaryOperation(Operation):
                     names.append(name)
         return sorted(names)
 
-
 def operator(name, symbol, rule, associative=False, precedence=1):
-    class Operation_(BinaryOperation):
+    class BinaryOp(BinaryOperation):
         def __init__(self, *terms):
-            self.terms = list(terms)
+            self.terms = map(parse, terms)
             if len(terms) < 2:
                 raise TypeError('binary operators take at least 2 ' +
                         'arguments (%d given)' % len(terms))
@@ -134,7 +280,7 @@ def operator(name, symbol, rule, associative=False, precedence=1):
                         'associative') % (name, len(terms)))
 
         def __str__(self):
-            wrap_ = lambda term: wrap(term, Operation_)
+            wrap_ = lambda term: wrap(term, BinaryOp)
             terms = map(wrap_, self.terms)
             return (' %s ' % symbol).join(terms)
 
@@ -142,11 +288,23 @@ def operator(name, symbol, rule, associative=False, precedence=1):
             values = map(lambda t: t.evaluate(variables), self.terms)
             return reduce(rule, values)
 
-    Operation_.__name__ = name
-    Operation_.associative = associative
-    Operation_.precedence = precedence
-    Operation_.symbol = symbol
-    return Operation_
+        def higher(self, operation):
+            return precedence < operation.precedence
+
+        def identical(self, expression):
+            expression = parse(expression)
+            if not isinstance(expression, BinaryOp):
+                return False
+            for i, term in enumerate(self):
+                if not term.identical(expression[i]):
+                    return False
+            return True
+
+    BinaryOp.__name__ = name
+    BinaryOp.associative = associative
+    BinaryOp.precedence = precedence
+    BinaryOp.symbol = symbol
+    return BinaryOp
 
 And = operator('And', '^', lambda p, q: p and q, True)
 Or = operator('Or', 'v', lambda p, q: p or q, True)
@@ -218,102 +376,3 @@ class TruthTable(object):
             self.rows.append((perm, value))
             self.values.append(value)
 
-# =============================================================================
-# Parser
-# =============================================================================
-
-lexer_re = re.compile(r'[a-zA-Z]\w*|[~\^()\|]|->|<->|\S+?')
-var_re = re.compile(r'^[a-zA-Z]\w*$')
-operation_re = re.compile(r'^(?:[\^v\|]|AND|OR|XOR|NAND|NOR|->|<->)$', re.I)
-
-def tokenize(expression):
-	return lexer_re.findall(expression)
-
-def isvar(token):
-    if token is None:
-        return None
-    return var_re.match(token)
-
-def isoperation(token):
-    if token is None:
-        return None
-    return operation_re.match(token)
-
-def expected(expected, saw=None):
-    saw = 'EOE' if saw is None else '`%s`' % saw
-    raise SyntaxError('expected %s, saw %s' % (expected, saw))
-
-def parse(expression):
-    if isinstance(expression, Expression):
-        return expression
-    if isinstance(expression, str):
-        expression = tokenize(expression)
-    return Parser(expression).parse()
-
-class Parser(object):
-    def __init__(self, tokens):
-        self.tokens = tokens
-        self.terms = []
-        self.operation = None
-
-    def read(self):
-        if self.tokens:
-            return self.tokens.pop(0)
-        return None
-
-    def parse(self):
-        while True:
-            term = self.next_term()
-            self.terms.append(term)
-            token = self.read()
-            if token is None:
-                break
-            if not isoperation(token):
-                expected('an operation or EOE', token)
-
-            op = self.operation
-            new_op = get_operation(token)
-            if not op and isinstance(term, BinaryOperation) and \
-                type(term).precedence < new_op.precedence:
-                self.terms.append(parse(self.tokens))
-                return new_op(*self.terms)
-            elif not op:
-                self.operation = new_op
-            elif new_op.precedence > op.precedence:
-                self.terms = [op(*self.terms)]
-                self.terms.append(parse(self.tokens))
-                return new_op(*self.terms)
-            elif op is not new_op:
-                self.terms = [op(*self.terms)]
-                self.operation = new_op
-
-        if self.operation is None:
-            return self.terms[0]
-        return self.operation(*self.terms)
-
-    def next_term(self):
-        token = self.read()
-
-        if isvar(token):
-            return Var(token)
-
-        if token == '~':
-            return Not(self.next_term())
-
-        if token == '(':
-            toks, depth = [], 1
-            while self.tokens:
-                tok = self.read()
-                if tok == '(':
-                    depth += 1
-                elif tok == ')':
-                    if depth == 1:
-                        break
-                    depth -= 1
-                toks.append(tok)
-            else:
-                expected('an operation or `)`')
-
-            return parse(toks)
-
-        expected('a variable, `~`, or `(`', token)
