@@ -37,8 +37,6 @@ class Parser(object):
         self.tokens = tokens
         self.i = 0
         self.terms = []
-        self.operation = None
-        self.expression = self.parse()
 
     def read(self):
         if self.i < len(self.tokens):
@@ -46,49 +44,43 @@ class Parser(object):
             return self.tokens[self.i-1]
         return None
 
-    def parse(self):
+    def parse(self, final_op=None):
+        op = None
+
         while True:
             term = self.next_term()
             token = self.read()
-            if token is None:
-                self.terms.append(term)
-                break
+
+            if term is None or token is None:
+                if op is None:
+                    return term
+                if term:self.terms.append(term)
+                return op(*self.terms)
+
             if not isoperation(token):
                 expected('an operation or EOE', token)
 
             next_op = get_operation(token)
-            op = self.operation
+
+            if final_op and next_op.precedence >= final_op.precedence:
+                return 1
+
             if op:
                 if op is next_op:
                     self.terms.append(term)
-                elif next_op.higher(op):
-                    print term
+                    op = next_op
+                elif next_op.precedence < op.precedence:
+                    ghost = Parser(self.tokens)
+                    ghost.i = self.i - 2
+                    self.terms.append(next_op(*ghost.parse(op)))
+                    self.i = ghost.i
                 else:
                     self.terms.append(term)
                     self.terms = [op(*self.terms)]
+                    op = next_op
             else:
                 self.terms.append(term)
-
-            self.operation = next_op
-            '''
-            if not op and isinstance(term, BinaryOperation) and \
-                type(term).precedence < new_op.precedence:
-                self.terms.append(parse(self.tokens))
-                return new_op(*self.terms)
-            elif not op:
-                self.operation = new_op
-            elif new_op.precedence > op.precedence:
-                self.terms = [op(*self.terms)]
-                self.terms.append(parse(self.tokens))
-                return new_op(*self.terms)
-            elif op is not new_op:
-                self.terms = [op(*self.terms)]
-                self.operation = new_op
-            '''
-
-        if self.operation is None:
-            return self.terms[0]
-        return self.operation(*self.terms)
+                op = next_op
 
 
     def next_term(self):
@@ -270,7 +262,7 @@ class BinaryOperation(Operation):
 def operator(name, symbol, rule, associative=False, precedence=1):
     class BinaryOp(BinaryOperation):
         def __init__(self, *terms):
-            self.terms = map(parse, terms)
+            self.terms = list(terms) #map(parse, terms)
             if len(terms) < 2:
                 raise TypeError('binary operators take at least 2 ' +
                         'arguments (%d given)' % len(terms))
@@ -287,9 +279,6 @@ def operator(name, symbol, rule, associative=False, precedence=1):
         def evaluate(self, variables):
             values = map(lambda t: t.evaluate(variables), self.terms)
             return reduce(rule, values)
-
-        def higher(self, operation):
-            return precedence < operation.precedence
 
         def identical(self, expression):
             expression = parse(expression)
