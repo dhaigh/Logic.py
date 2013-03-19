@@ -132,12 +132,12 @@ class Expression(object):
     def get_names(self):
         raise NotImplementedError
 
-    def evaluate(self, variables):
-        raise NotImplementedError
-
     def equivalent_to(self, expression):
         expression = parse(expression)
         return Biconditional(self, expression).is_tautology()
+
+    def evaluate(self, variables):
+        raise NotImplementedError
 
     def identical(self, expression):
         raise NotImplementedError
@@ -298,7 +298,7 @@ def operator(name, symbol, rule, associative=False, precedence=1):
 And = operator('And', '^', lambda p, q: p and q, True)
 Or = operator('Or', 'v', lambda p, q: p or q, True)
 Xor = operator('Xor', 'XOR', lambda p, q: p is not q, True)
-Nand = operator('Nand', '|', lambda p, q: not (p and q))
+Nand = operator('Nand', 'NAND', lambda p, q: not (p and q))
 Nor = operator('Nor', 'NOR', lambda p, q: not (p or q))
 Conditional = operator('Conditional', '->', lambda p, q: not p or q, False, 2)
 Biconditional = operator('Biconditional', '<->', lambda p, q: p is q, True, 2)
