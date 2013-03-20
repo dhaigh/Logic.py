@@ -121,75 +121,75 @@ class TestExpressionMethods(unittest.TestCase):
         fft = {'p': False, 'q': False, 'r': True}
         fff = {'p': False, 'q': False, 'r': False}
         # not
-        self.assertEquals(Np.evaluate({'p': True}), False)
-        self.assertEquals(Np.evaluate({'p': False}), True)
+        self.assertEqual(Np.evaluate({'p': True}), False)
+        self.assertEqual(Np.evaluate({'p': False}), True)
         # and
-        self.assertEquals(Apq.evaluate(tt), True)
-        self.assertEquals(Apq.evaluate(tf), False)
-        self.assertEquals(Apq.evaluate(ft), False)
-        self.assertEquals(Apq.evaluate(ff), False)
-        self.assertEquals(Apqr.evaluate(ttt), True)
-        self.assertEquals(Apqr.evaluate(ttf), False)
-        self.assertEquals(Apqr.evaluate(tft), False)
-        self.assertEquals(Apqr.evaluate(tff), False)
-        self.assertEquals(Apqr.evaluate(ftt), False)
-        self.assertEquals(Apqr.evaluate(ftf), False)
-        self.assertEquals(Apqr.evaluate(fft), False)
-        self.assertEquals(Apqr.evaluate(fff), False)
+        self.assertEqual(Apq.evaluate(tt), True)
+        self.assertEqual(Apq.evaluate(tf), False)
+        self.assertEqual(Apq.evaluate(ft), False)
+        self.assertEqual(Apq.evaluate(ff), False)
+        self.assertEqual(Apqr.evaluate(ttt), True)
+        self.assertEqual(Apqr.evaluate(ttf), False)
+        self.assertEqual(Apqr.evaluate(tft), False)
+        self.assertEqual(Apqr.evaluate(tff), False)
+        self.assertEqual(Apqr.evaluate(ftt), False)
+        self.assertEqual(Apqr.evaluate(ftf), False)
+        self.assertEqual(Apqr.evaluate(fft), False)
+        self.assertEqual(Apqr.evaluate(fff), False)
         # or
-        self.assertEquals(Opq.evaluate(tt), True)
-        self.assertEquals(Opq.evaluate(tf), True)
-        self.assertEquals(Opq.evaluate(ft), True)
-        self.assertEquals(Opq.evaluate(ff), False)
-        self.assertEquals(Opqr.evaluate(ttt), True)
-        self.assertEquals(Opqr.evaluate(ttf), True)
-        self.assertEquals(Opqr.evaluate(tft), True)
-        self.assertEquals(Opqr.evaluate(tff), True)
-        self.assertEquals(Opqr.evaluate(ftt), True)
-        self.assertEquals(Opqr.evaluate(ftf), True)
-        self.assertEquals(Opqr.evaluate(fft), True)
-        self.assertEquals(Opqr.evaluate(fff), False)
+        self.assertEqual(Opq.evaluate(tt), True)
+        self.assertEqual(Opq.evaluate(tf), True)
+        self.assertEqual(Opq.evaluate(ft), True)
+        self.assertEqual(Opq.evaluate(ff), False)
+        self.assertEqual(Opqr.evaluate(ttt), True)
+        self.assertEqual(Opqr.evaluate(ttf), True)
+        self.assertEqual(Opqr.evaluate(tft), True)
+        self.assertEqual(Opqr.evaluate(tff), True)
+        self.assertEqual(Opqr.evaluate(ftt), True)
+        self.assertEqual(Opqr.evaluate(ftf), True)
+        self.assertEqual(Opqr.evaluate(fft), True)
+        self.assertEqual(Opqr.evaluate(fff), False)
         # xor
-        self.assertEquals(Jpq.evaluate(tt), False)
-        self.assertEquals(Jpq.evaluate(tf), True)
-        self.assertEquals(Jpq.evaluate(ft), True)
-        self.assertEquals(Jpq.evaluate(ff), False)
-        self.assertEquals(Jpqr.evaluate(ttt), True)
-        self.assertEquals(Jpqr.evaluate(ttf), False)
-        self.assertEquals(Jpqr.evaluate(tft), False)
-        self.assertEquals(Jpqr.evaluate(tff), True)
-        self.assertEquals(Jpqr.evaluate(ftt), False)
-        self.assertEquals(Jpqr.evaluate(ftf), True)
-        self.assertEquals(Jpqr.evaluate(fft), True)
-        self.assertEquals(Jpqr.evaluate(fff), False)
+        self.assertEqual(Jpq.evaluate(tt), False)
+        self.assertEqual(Jpq.evaluate(tf), True)
+        self.assertEqual(Jpq.evaluate(ft), True)
+        self.assertEqual(Jpq.evaluate(ff), False)
+        self.assertEqual(Jpqr.evaluate(ttt), True)
+        self.assertEqual(Jpqr.evaluate(ttf), False)
+        self.assertEqual(Jpqr.evaluate(tft), False)
+        self.assertEqual(Jpqr.evaluate(tff), True)
+        self.assertEqual(Jpqr.evaluate(ftt), False)
+        self.assertEqual(Jpqr.evaluate(ftf), True)
+        self.assertEqual(Jpqr.evaluate(fft), True)
+        self.assertEqual(Jpqr.evaluate(fff), False)
         # nand
-        self.assertEquals(Dpq.evaluate(tt), False)
-        self.assertEquals(Dpq.evaluate(tf), True)
-        self.assertEquals(Dpq.evaluate(ft), True)
-        self.assertEquals(Dpq.evaluate(ff), True)
+        self.assertEqual(Dpq.evaluate(tt), False)
+        self.assertEqual(Dpq.evaluate(tf), True)
+        self.assertEqual(Dpq.evaluate(ft), True)
+        self.assertEqual(Dpq.evaluate(ff), True)
         # nor
-        self.assertEquals(Xpq.evaluate(tt), False)
-        self.assertEquals(Xpq.evaluate(tf), False)
-        self.assertEquals(Xpq.evaluate(ft), False)
-        self.assertEquals(Xpq.evaluate(ff), True)
+        self.assertEqual(Xpq.evaluate(tt), False)
+        self.assertEqual(Xpq.evaluate(tf), False)
+        self.assertEqual(Xpq.evaluate(ft), False)
+        self.assertEqual(Xpq.evaluate(ff), True)
         # conditional
-        self.assertEquals(Cpq.evaluate(tt), True)
-        self.assertEquals(Cpq.evaluate(tf), False)
-        self.assertEquals(Cpq.evaluate(ft), True)
-        self.assertEquals(Cpq.evaluate(ff), True)
+        self.assertEqual(Cpq.evaluate(tt), True)
+        self.assertEqual(Cpq.evaluate(tf), False)
+        self.assertEqual(Cpq.evaluate(ft), True)
+        self.assertEqual(Cpq.evaluate(ff), True)
         # biconditional
-        self.assertEquals(Epq.evaluate(tt), True)
-        self.assertEquals(Epq.evaluate(tf), False)
-        self.assertEquals(Epq.evaluate(ft), False)
-        self.assertEquals(Epq.evaluate(ff), True)
-        self.assertEquals(Epqr.evaluate(ttt), True)
-        self.assertEquals(Epqr.evaluate(ttf), False)
-        self.assertEquals(Epqr.evaluate(tft), False)
-        self.assertEquals(Epqr.evaluate(tff), True)
-        self.assertEquals(Epqr.evaluate(ftt), False)
-        self.assertEquals(Epqr.evaluate(ftf), True)
-        self.assertEquals(Epqr.evaluate(fft), True)
-        self.assertEquals(Epqr.evaluate(fff), False)
+        self.assertEqual(Epq.evaluate(tt), True)
+        self.assertEqual(Epq.evaluate(tf), False)
+        self.assertEqual(Epq.evaluate(ft), False)
+        self.assertEqual(Epq.evaluate(ff), True)
+        self.assertEqual(Epqr.evaluate(ttt), True)
+        self.assertEqual(Epqr.evaluate(ttf), False)
+        self.assertEqual(Epqr.evaluate(tft), False)
+        self.assertEqual(Epqr.evaluate(tff), True)
+        self.assertEqual(Epqr.evaluate(ftt), False)
+        self.assertEqual(Epqr.evaluate(ftf), True)
+        self.assertEqual(Epqr.evaluate(fft), True)
+        self.assertEqual(Epqr.evaluate(fff), False)
 
     def test_identical(self):
         self.assertTrue(Apq.identical(Apq))
@@ -198,6 +198,7 @@ class TestExpressionMethods(unittest.TestCase):
         self.assertFalse(Apqr.identical(A(Apq, r)))
         self.assertFalse(C(p, Opq).identical(C(Opq, p)))
         self.assertFalse(Opq.identical(O(q, p)))
+        self.assertFalse(p.identical(Opq))
 
     def test_tautology(self):
         self.assertTrue(T.is_tautology())
@@ -214,7 +215,7 @@ class TestExpressionMethods(unittest.TestCase):
 # =============================================================================
 
 class TestBinaryOperations(unittest.TestCase):
-    def test_properties(self):
+    def test_init(self):
         self.assertEqual(Apq.terms, [p, q])
         self.assertEqual(Opqr.terms, [p, q, r])
 
@@ -245,21 +246,107 @@ class TestBinaryOperations(unittest.TestCase):
 # Truth Tables
 # =============================================================================
 
+class TestTruthTable(unittest.TestCase):
+    def test_values(self):
+        tt_p = TruthTable(p)
+        tt_Apq = TruthTable(Apq)
+        tt_Apqr = TruthTable(Apqr)
+        tt_Cpq = TruthTable(Cpq)
+        t, f = True, False
 
-
-
-
-
+        self.assertIs(tt_p.expression, p)
+        self.assertIs(tt_Apq.expression, Apq)
+        self.assertEqual(tt_p.names, ['p'])
+        self.assertEqual(tt_Apq.names, ['p', 'q'])
+        self.assertEqual(tt_Apqr.names, ['p', 'q', 'r'])
+        self.assertEqual(tt_p.rows, [([t], t), ([f], f)])
+        self.assertEqual(tt_Apq.rows, [
+            ([t,t], t),
+            ([t,f], f),
+            ([f,t], f),
+            ([f,f], f)
+        ])
+        self.assertEqual(tt_Apqr.rows, [
+            ([t,t,t], t),
+            ([t,t,f], f),
+            ([t,f,t], f),
+            ([t,f,f], f),
+            ([f,t,t], f),
+            ([f,t,f], f),
+            ([f,f,t], f),
+            ([f,f,f], f)
+        ])
+        self.assertEqual(tt_Cpq.rows, [
+            ([t,t], t),
+            ([t,f], f),
+            ([f,t], t),
+            ([f,f], t)
+        ])
+        self.assertEqual(TruthTable(T).rows, [([], t)])
+        self.assertEqual(TruthTable(F).rows, [([], f)])
+        self.assertEqual(tt_p.values, [t, f])
+        self.assertEqual(tt_Apq.values, [t, f, f, f])
+        self.assertEqual(tt_Apqr.values, [t, f, f, f, f, f, f, f])
+        self.assertEqual(tt_Cpq.values, [t, f, t, t])
 
 # =============================================================================
 # Parser
 # =============================================================================
 
+class TestParser(unittest.TestCase):
+    def test_simple(self):
+        self.assertTrue(parse('p').identical(p))
+        self.assertTrue(parse('~p').identical(Np))
+        self.assertFalse(parse('p').identical(Np))
+        self.assertTrue(parse('p AND q').identical(Apq))
+        self.assertTrue(parse('p ^ q').identical(Apq))
+        self.assertTrue(parse('p OR q').identical(Opq))
+        self.assertTrue(parse('p v q').identical(Opq))
+        self.assertTrue(parse('p XOR q').identical(Jpq))
+        self.assertTrue(parse('p NAND q').identical(Dpq))
+        self.assertTrue(parse('p | q').identical(Dpq))
+        self.assertTrue(parse('p NOR q').identical(Xpq))
+        self.assertTrue(parse('p -> q').identical(Cpq))
+        self.assertTrue(parse('p <-> q').identical(Epq))
+        self.assertTrue(parse('p ^ q ^ r').identical(Apqr))
+        self.assertTrue(parse('p v q v r').identical(Opqr))
+        self.assertTrue(parse('p XOR q XOR r').identical(Jpqr))
+        self.assertTrue(parse('p <-> q <-> r').identical(Epqr))
+        self.assertTrue(parse('p ^ q ^ r ^ s').identical(Apqrs))
+        self.assertTrue(parse('p v q v r v s').identical(Opqrs))
+        self.assertTrue(parse('p XOR q XOR r XOR s').identical(Jpqrs))
+        self.assertTrue(parse('p <-> q <-> r <-> s').identical(Epqrs))
 
+    def test_names(self):
+        self.assertTrue(parse('abc').identical(Var('abc')))
+        self.assertTrue(parse('Abc').identical(Var('Abc')))
+        self.assertFalse(parse('Abc').identical(Var('abc')))
+        self.assertTrue(parse('a_b').identical(Var('a_b')))
+        self.assertTrue(parse('a1').identical(Var('a1')))
 
+    def test_spacing(self):
+        self.assertTrue(parse('       p').identical(p))
+        self.assertTrue(parse('p ').identical(p))
+        self.assertTrue(parse('     p ').identical(p))
+        self.assertTrue(parse(' ~    p ').identical(Np))
+        self.assertTrue(parse(' ~p ').identical(Np))
+        self.assertTrue(parse('p^q^r').identical(Apqr))
+        self.assertTrue(parse('p|q').identical(Dpq))
+        self.assertTrue(parse('p->q').identical(Cpq))
+        self.assertTrue(parse('p    ->q').identical(Cpq))
+        self.assertTrue(parse('p->    q   ').identical(Cpq))
+        self.assertTrue(parse(' p   ^q^ r').identical(Apqr))
+        self.assertTrue(parse(' p   <->q<-> r').identical(Epqr))
 
+    def test_symbol_combination(self):
+        self.assertTrue(parse('p^q AND r').identical(Apqr))
+        self.assertTrue(parse('p v q OR r').identical(Opqr))
+        self.assertTrue(parse('p OR q OR r v s').identical(Opqrs))
 
-
+    def test_combination(self):
+        self.assertTrue(parse('p OR q AND r').identical(A(Opq, r)))
+        self.assertTrue(parse('p OR q OR r AND s').identical(A(Opqr, s)))
+        self.assertTrue(parse('p AND q OR r').identical(O(Apq, r)))
 
 
 # and expecting exceptions?

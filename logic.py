@@ -194,7 +194,7 @@ class Var(Expression):
         expression = parse(expression)
         if not isinstance(expression, Var):
             return False
-        return expression.name == self.name
+        return self.name == expression.name
 
 def wrap(term, op=None):
     if (# never put brackets around T/F, p, or ~p
@@ -230,8 +230,10 @@ class Not(Operation):
         return not term
 
     def identical(self, expression):
-        return isinstance(expression, Not) and \
-               self.term.identical(expression)
+        expression = parse(expression)
+        if not isinstance(expression, Not):
+            return False
+        return self.term.identical(expression.term)
 
 class BinaryOperation(Operation):
     def __getitem__(self, index):
@@ -278,7 +280,8 @@ def operator(name, symbol, rule, associative=False, precedence=1):
 
         def identical(self, expression):
             expression = parse(expression)
-            if not isinstance(expression, BinaryOp):
+            if (not isinstance(expression, BinaryOp) or
+                len(self) != len(expression)):
                 return False
             for i, term in enumerate(self):
                 if not term.identical(expression[i]):
@@ -310,8 +313,6 @@ def get_operation(symbol):
         '<->': Biconditional
     }
     symbol = symbol.lower()
-    if symbol not in operations:
-        raise Exception('Invalid symbol')
     return operations[symbol]
 
 # =============================================================================
@@ -335,7 +336,7 @@ def bool_permutations(n):
 class TruthTable(object):
     def __init__(self, expression):
         self.expression = parse(expression)
-        self.variables = self.expression.get_names()
+        self.names = self.expression.get_names()
         self.rows = []
         self.values = []
         self.build()
@@ -352,11 +353,8 @@ class TruthTable(object):
         return output
 
     def build(self):
-        names = self.expression.get_names()
-        n_vars = len(names)
-
-        for perm in bool_permutations(n_vars):
-            variables = dict(zip(names, perm))
+        for perm in bool_permutations(len(self.names)):
+            variables = dict(zip(self.names, perm))
             value = self.expression.evaluate(variables)
             self.rows.append((perm, value))
             self.values.append(value)
