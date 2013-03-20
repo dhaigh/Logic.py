@@ -197,16 +197,12 @@ class Var(Expression):
         return expression.name == self.name
 
 def wrap(term, op=None):
-    if not isinstance(term, BinaryOperation):
-        return str(term)
-    return '(%s)' % term
     if (# never put brackets around T/F, p, or ~p
         not isinstance(term, BinaryOperation) or
         # operations with higher precedence
-        # (op and op.precedence > type(term).precedence) or
+		(op and op.precedence > type(term).precedence) or
         # associative operations of the same type
-        (op and op.associative and
-         isinstance(term, op))):
+        (op and op.associative and isinstance(term, op))):
         return '%s' % term
     return '(%s)' % term
 

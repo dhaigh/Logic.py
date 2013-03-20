@@ -56,7 +56,15 @@ class TestExpressionMethods(unittest.TestCase):
         self.assertEqual(str(Opqr), 'p v q v r')
         self.assertEqual(str(Jpqr), 'p XOR q XOR r')
         self.assertEqual(str(Epqr), 'p <-> q <-> r')
-        # more complex, including ()
+        self.assertEqual(str(A(Opq, Jpq)), '(p v q) ^ (p XOR q)')
+        self.assertEqual(str(A(N(Cpq), Cpq)), '~(p -> q) ^ (p -> q)')
+        self.assertEqual(str(J(Np, O(Epqr, Xpq))),
+						 '~p XOR ((p <-> q <-> r) v (p NOR q))')
+        self.assertEqual(str(C(Apq, Opqr)), 'p ^ q -> p v q v r')
+        self.assertEqual(str(O(C(Apq, p), q, r)), '(p ^ q -> p) v q v r')
+        self.assertEqual(str(E(A(p, q, r), Opq)), 'p ^ q ^ r <-> p v q')
+        self.assertEqual(str(E(A(Apq, r), Opq)), 'p ^ q ^ r <-> p v q')
+        self.assertEqual(str(E(A(Apq, r), Cpq)), 'p ^ q ^ r <-> (p -> q)')
 
     def test_get_names(self):
         self.assertEqual(p.get_names(), ['p'])
@@ -67,6 +75,9 @@ class TestExpressionMethods(unittest.TestCase):
         self.assertEqual(Apq.get_names(), ['p', 'q'])
         self.assertEqual(Cpq.get_names(), ['p', 'q'])
         self.assertEqual(Epqr.get_names(), ['p', 'q', 'r'])
+        self.assertEqual(Epqrs.get_names(), ['p', 'q', 'r', 's'])
+        self.assertEqual(A(O(J(p, q), Var('x')), Var('qqq')).get_names(),
+					     ['p', 'q', 'qqq', 'x'])
         self.assertEqual(Epqrs.get_names(), ['p', 'q', 'r', 's'])
 
     # equivalence __eq__, equivalent_to
@@ -81,13 +92,13 @@ class TestExpressionMethods(unittest.TestCase):
 
 
     def test_tautology(self):
+        self.assertTrue(T.is_tautology())
         self.assertTrue(C(A(Cpq, p), p).is_tautology())
         self.assertTrue(O(p, Np).is_tautology())
-        self.assertTrue(T.is_tautology())
 
     def test_contradiction(self):
-        self.assertTrue(A(p, Np).is_contradiction())
         self.assertTrue(F.is_contradiction())
+        self.assertTrue(A(p, Np).is_contradiction())
         self.assertFalse(p.is_contradiction())
 
 # =============================================================================
