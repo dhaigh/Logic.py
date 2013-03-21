@@ -65,6 +65,7 @@ class TestExpressionMethods(unittest.TestCase):
         self.assertEqual(str(E(A(p, q, r), Opq)), 'p ^ q ^ r <-> p v q')
         self.assertEqual(str(E(A(Apq, r), Opq)), 'p ^ q ^ r <-> p v q')
         self.assertEqual(str(E(A(Apq, r), Cpq)), 'p ^ q ^ r <-> (p -> q)')
+        self.assertEqual(str(E(A(Apq, r), O(Cpq, q))), 'p ^ q ^ r <-> (p -> q) v q')
 
     def test_get_names(self):
         self.assertEqual(p.get_names(), ['p'])
@@ -81,28 +82,34 @@ class TestExpressionMethods(unittest.TestCase):
         self.assertEqual(Epqrs.get_names(), ['p', 'q', 'r', 's'])
 
     def test_equivalence(self):
-        self.assertTrue(p.equivalent_to(p))
-        self.assertTrue(T.equivalent_to(O(p, Np)))
-        self.assertTrue(F.equivalent_to(A(p, Np)))
-        self.assertTrue(Cpq.equivalent_to(O(Np, q)))
-        self.assertTrue(p.equivalent_to(A(p, Opq)))
-        self.assertTrue(p.equivalent_to(O(p, Apq)))
-        self.assertTrue(Apq.equivalent_to(A(Apq, Apq)))
-        self.assertTrue(N(Apq).equivalent_to(O(Np, Nq)))
-        self.assertTrue(Apqr.equivalent_to(A(r, q, p)))
-        self.assertTrue(Opqr.equivalent_to(O(r, q, p)))
-        self.assertTrue(Jpqr.equivalent_to(J(r, q, p)))
-        self.assertTrue(Epqr.equivalent_to(E(r, q, p)))
-        self.assertTrue(A(Apq, r).equivalent_to(A(p, A(q, r))))
-        self.assertTrue(O(Opq, r).equivalent_to(O(p, O(q, r))))
-        self.assertTrue(J(Jpq, r).equivalent_to(J(p, J(q, r))))
-        self.assertFalse(D(Dpq, r).equivalent_to(D(p, D(q, r))))
-        self.assertFalse(X(Xpq, r).equivalent_to(X(p, X(q, r))))
-        self.assertFalse(Cpq.equivalent_to(C(q, p)))
-        self.assertFalse(p.equivalent_to(q))
-        self.assertFalse(Cpq.equivalent_to(C(r, s)))
-        self.assertFalse(Apq.equivalent_to(Opq))
+        self.assertTrue(p.equivalent(p))
+        self.assertTrue(T.equivalent(O(p, Np)))
+        self.assertTrue(F.equivalent(A(p, Np)))
+        self.assertTrue(p.equivalent(N(Np)))
+        self.assertTrue(p.equivalent(O(p, F)))
+        self.assertTrue(p.equivalent(A(p, T)))
+        self.assertTrue(T.equivalent(O(p, T)))
+        self.assertTrue(F.equivalent(A(p, F)))
+        self.assertTrue(Cpq.equivalent(O(Np, q)))
+        self.assertTrue(p.equivalent(A(p, Opq)))
+        self.assertTrue(p.equivalent(O(p, Apq)))
+        self.assertTrue(Apq.equivalent(A(Apq, Apq)))
+        self.assertTrue(N(Apq).equivalent(O(Np, Nq)))
+        self.assertTrue(Apqr.equivalent(A(r, q, p)))
+        self.assertTrue(Opqr.equivalent(O(r, q, p)))
+        self.assertTrue(Jpqr.equivalent(J(r, q, p)))
+        self.assertTrue(Epqr.equivalent(E(r, q, p)))
+        self.assertTrue(A(Apq, r).equivalent(A(p, A(q, r))))
+        self.assertTrue(O(Opq, r).equivalent(O(p, O(q, r))))
+        self.assertTrue(J(Jpq, r).equivalent(J(p, J(q, r))))
+        self.assertFalse(D(Dpq, r).equivalent(D(p, D(q, r))))
+        self.assertFalse(X(Xpq, r).equivalent(X(p, X(q, r))))
+        self.assertFalse(Cpq.equivalent(C(q, p)))
+        self.assertFalse(p.equivalent(q))
+        self.assertFalse(Cpq.equivalent(C(r, s)))
+        self.assertFalse(Apq.equivalent(Opq))
         self.assertTrue(p != q)
+        self.assertTrue(p == N(Np))
         self.assertTrue(p == p == p)
         self.assertTrue(A(p, q) == A(p, q) == Apq)
         self.assertFalse(p == q)
@@ -190,10 +197,26 @@ class TestExpressionMethods(unittest.TestCase):
         self.assertEqual(Epqr.evaluate(ftf), True)
         self.assertEqual(Epqr.evaluate(fft), True)
         self.assertEqual(Epqr.evaluate(fff), False)
+        # multiple
+        self.assertEqual(A(p, Opq).evaluate(tt), True)
+        self.assertEqual(A(p, Opq).evaluate(tf), True)
+        self.assertEqual(A(p, Opq).evaluate(ft), False)
+        self.assertEqual(A(p, Opq).evaluate(ff), False)
+        self.assertEqual(O(p, Apq).evaluate(tt), True)
+        self.assertEqual(O(p, Apq).evaluate(tf), True)
+        self.assertEqual(O(p, Apq).evaluate(ft), False)
+        self.assertEqual(O(p, Apq).evaluate(ff), False)
+        self.assertEqual(C(A(Cpq, p), q).evaluate(tt), True)
+        self.assertEqual(C(A(Cpq, p), q).evaluate(tf), True)
+        self.assertEqual(C(A(Cpq, p), q).evaluate(ft), True)
+        self.assertEqual(C(A(Cpq, p), q).evaluate(ff), True)
 
     def test_identical(self):
+        self.assertTrue(T.identical(T))
+        self.assertTrue(F.identical(F))
         self.assertTrue(Apq.identical(Apq))
         self.assertTrue(Apq.identical(A(p, q)))
+        self.assertTrue(Opqrs.identical(O(p, q, r, s)))
         self.assertFalse(T.identical(O(p, Np)))
         self.assertFalse(Apqr.identical(A(Apq, r)))
         self.assertFalse(C(p, Opq).identical(C(Opq, p)))
@@ -222,8 +245,12 @@ class TestBinaryOperations(unittest.TestCase):
     def test_getitem(self):
         self.assertIs(Apq[0], p)
         self.assertIs(Apq[1], q)
+        self.assertIs(Apq[-1], q)
         self.assertIs(Apqr[1], q)
         self.assertIs(Apqr[2], r)
+        self.assertIs(Apqr[-1], r)
+        self.assertIs(Apqr[-2], q)
+        self.assertIs(Apqr[-3], p)
         self.assertIs(Dpq[0], p)
         self.assertIs(Dpq[1], q)
 
@@ -250,15 +277,12 @@ class TestTruthTable(unittest.TestCase):
     def test_values(self):
         tt_p = TruthTable(p)
         tt_Apq = TruthTable(Apq)
-        tt_Apqr = TruthTable(Apqr)
-        tt_Cpq = TruthTable(Cpq)
+        tt_Apqr = TruthTable('p ^ q ^ r')
+        tt_Cpq = TruthTable('p -> q')
         t, f = True, False
 
         self.assertIs(tt_p.expression, p)
         self.assertIs(tt_Apq.expression, Apq)
-        self.assertEqual(tt_p.names, ['p'])
-        self.assertEqual(tt_Apq.names, ['p', 'q'])
-        self.assertEqual(tt_Apqr.names, ['p', 'q', 'r'])
         self.assertEqual(tt_p.rows, [([t], t), ([f], f)])
         self.assertEqual(tt_Apq.rows, [
             ([t,t], t),
@@ -338,16 +362,45 @@ class TestParser(unittest.TestCase):
         self.assertTrue(parse(' p   ^q^ r').identical(Apqr))
         self.assertTrue(parse(' p   <->q<-> r').identical(Epqr))
 
+    def test_unconditionals(self):
+        self.assertTrue(parse('T').identical(T))
+        self.assertTrue(parse('F').identical(F))
+
     def test_symbol_combination(self):
         self.assertTrue(parse('p^q AND r').identical(Apqr))
         self.assertTrue(parse('p v q OR r').identical(Opqr))
         self.assertTrue(parse('p OR q OR r v s').identical(Opqrs))
+
+    def test_case(self):
+        self.assertTrue(parse('p or q Or r oR s').identical(Opqrs))
+        self.assertTrue(parse('p aNd q aND r and s').identical(Apqrs))
+        self.assertTrue(parse('p XoR q').identical(Jpq))
 
     def test_combination(self):
         self.assertTrue(parse('p OR q AND r').identical(A(Opq, r)))
         self.assertTrue(parse('p OR q OR r AND s').identical(A(Opqr, s)))
         self.assertTrue(parse('p AND q OR r').identical(O(Apq, r)))
 
+    def test_brackets(self):
+        self.assertTrue(parse('(p) v (q) v (r)').identical(Opqr))
+        self.assertTrue(parse('((p) v (q) v (r))').identical(Opqr))
+        self.assertTrue(parse('((p) v (q)) v (r)').identical(O(Opq, r)))
+        self.assertFalse(parse('((p) v (q)) v (r)').identical(Opqr))
+        self.assertTrue(parse('(p v q) v r').identical(O(Opq, r)))
+        self.assertTrue(parse('((p v q)) v r').identical(O(Opq, r)))
+        self.assertFalse(parse('(p v q) v r').identical(Opqr))
+        self.assertTrue(parse('(p v q) ^ r').identical(A(Opq, r)))
+        self.assertTrue(parse('p v (q ^ r)').identical(O(p, A(q, r))))
+        self.assertTrue(parse('(((p)) v (q ^ (r)))').identical(O(p, A(q, r))))
+
+    def test_precedence(self):
+        self.assertTrue(parse('p -> q ^ r').identical(C(p, A(q, r))))
+        self.assertTrue(parse('p -> p v q').identical(C(p, O(p, q))))
+        self.assertTrue(parse('p -> (q ^ r)').identical(C(p, A(q, r))))
+        self.assertTrue(parse('(p -> q) ^ r').identical(A(Cpq, r)))
+        self.assertTrue(parse('(p -> q) ^ r ^ s').identical(A(Cpq, r, s)))
+        self.assertTrue(parse('(p -> q ^ r) ^ r ^ s').identical(A(C(p, A(q, r)), r, s)))
+        self.assertTrue(parse('p v (q -> r ^ s)').identical(O(p, C(q, A(r, s)))))
 
 # and expecting exceptions?
 
