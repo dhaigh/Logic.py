@@ -22,7 +22,7 @@ def isoperation(token):
     return operation_re.match(token)
 
 def expected(expected, saw=None):
-    saw = 'EOE' if saw is None else '`%s`' % saw
+    saw = '`%s`' % saw if saw else 'EOE'
     raise SyntaxError('expected %s, saw %s' % (expected, saw))
 
 def parse(expression):
@@ -89,6 +89,11 @@ class Parser(object):
         if token is None:
             return None
 
+        if token == 'T':
+            return T
+        if token == 'F':
+            return F
+
         if isvar(token):
             return Var(token)
 
@@ -121,7 +126,7 @@ class Expression(object):
     def __eq__(self, expression):
         if not isinstance(expression, Expression):
             return False
-        return self.equivalent_to(expression)
+        return self.equivalent(expression)
 
     def __len__(self):
         raise NotImplementedError
@@ -132,7 +137,7 @@ class Expression(object):
     def get_names(self):
         raise NotImplementedError
 
-    def equivalent_to(self, expression):
+    def equivalent(self, expression):
         expression = parse(expression)
         return Biconditional(self, expression).is_tautology()
 
@@ -167,7 +172,7 @@ class Unconditional(Expression):
 
     def identical(self, expression):
         expression = parse(expression)
-        if not isinstance(expression, Var):
+        if not isinstance(expression, Unconditional):
             return False
         return expression.value == self.value
 
@@ -210,8 +215,6 @@ class Operation(Expression):
     pass
 
 class Not(Operation):
-    symbol = '~'
-
     def __init__(self, term):
         term = parse(term)
         self.term = term
@@ -251,7 +254,7 @@ class BinaryOperation(Operation):
 
     def get_names(self):
         names = []
-        for term in self.terms:
+        for term in self:
             for name in term.get_names():
                 if name not in names:
                     names.append(name)
@@ -291,7 +294,6 @@ def operator(name, symbol, rule, associative=False, precedence=1):
     BinaryOp.__name__ = name
     BinaryOp.associative = associative
     BinaryOp.precedence = precedence
-    BinaryOp.symbol = symbol
     return BinaryOp
 
 And = operator('And', '^', lambda p, q: p and q, True)
@@ -336,7 +338,6 @@ def bool_permutations(n):
 class TruthTable(object):
     def __init__(self, expression):
         self.expression = parse(expression)
-        self.names = self.expression.get_names()
         self.rows = []
         self.values = []
         self.build()
@@ -348,13 +349,14 @@ class TruthTable(object):
             return ' | '.join(cells) + '\n'
 
         rows = map(lambda r: r[0] + [r[1]], self.rows)
-        output = row_str(self.variables + [str(self.expression)])
+        output = row_str(self.expression.get_names() + [str(self.expression)])
         output += ''.join(map(row_str, rows))
         return output
 
     def build(self):
-        for perm in bool_permutations(len(self.names)):
-            variables = dict(zip(self.names, perm))
+        names = self.expression.get_names()
+        for perm in bool_permutations(len(names)):
+            variables = dict(zip(names, perm))
             value = self.expression.evaluate(variables)
             self.rows.append((perm, value))
             self.values.append(value)
