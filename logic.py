@@ -114,7 +114,7 @@ class Parser(object):
         expected('a variable, unconditional, `~`, or `(`', token)
 
 # =============================================================================
-# Expressions
+# Expression Classes
 # =============================================================================
 
 class Expression(object):
@@ -200,7 +200,7 @@ def wrap(term, op=None):
     if (# never put brackets around T/F, p, or ~p
         not isinstance(term, BinaryOperation) or
         # operations with higher precedence
-		(op and op.precedence > type(term).precedence) or
+        (op and op.precedence > type(term).precedence) or
         # associative operations of the same type
         (op and op.associative and isinstance(term, op))):
         return '%s' % term
@@ -218,7 +218,7 @@ class Not(Operation):
         return 1
 
     def __str__(self):
-        return '~%s' % wrap(self.term)
+        return '~%s' % wrap(self.term) # u+00ac
 
     def get_names(self):
         return self.term.get_names()
@@ -291,13 +291,13 @@ def operator(name, symbol, rule, associative=False, precedence=1):
     BinaryOp.precedence = precedence
     return BinaryOp
 
-And = operator('And', '^', lambda p, q: p and q, True)
-Or = operator('Or', 'v', lambda p, q: p or q, True)
-Xor = operator('Xor', 'XOR', lambda p, q: p is not q, True)
-Nand = operator('Nand', 'NAND', lambda p, q: not (p and q))
-Nor = operator('Nor', 'NOR', lambda p, q: not (p or q))
-Conditional = operator('Conditional', '->', lambda p, q: not p or q, False, 2)
-Biconditional = operator('Biconditional', '<->', lambda p, q: p is q, True, 2)
+And = operator('And', '^', lambda p, q: p and q, True) # u+2227
+Or = operator('Or', 'v', lambda p, q: p or q, True)  # u+2228
+Xor = operator('Xor', 'XOR', lambda p, q: p is not q, True) # u+2295
+Nand = operator('Nand', 'NAND', lambda p, q: not (p and q)) # u+2191
+Nor = operator('Nor', 'NOR', lambda p, q: not (p or q)) # u+2193
+Conditional = operator('Conditional', '->', lambda p, q: not p or q, False, 2) # u+2192
+Biconditional = operator('Biconditional', '<->', lambda p, q: p is q, True, 2) # u+2194
 
 def get_operation(symbol):
     operations = {
