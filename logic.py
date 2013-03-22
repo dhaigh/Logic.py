@@ -218,7 +218,7 @@ class Not(Operation):
         return 1
 
     def __str__(self):
-        return '~%s' % wrap(self.term) # u+00ac
+        return '~%s' % wrap(self.term)
 
     def get_names(self):
         return self.term.get_names()
@@ -291,13 +291,13 @@ def operator(name, symbol, rule, associative=False, precedence=1):
     BinaryOp.precedence = precedence
     return BinaryOp
 
-And = operator('And', '^', lambda p, q: p and q, True) # u+2227
-Or = operator('Or', 'v', lambda p, q: p or q, True)  # u+2228
-Xor = operator('Xor', 'XOR', lambda p, q: p is not q, True) # u+2295
-Nand = operator('Nand', 'NAND', lambda p, q: not (p and q)) # u+2191
-Nor = operator('Nor', 'NOR', lambda p, q: not (p or q)) # u+2193
-Conditional = operator('Conditional', '->', lambda p, q: not p or q, False, 2) # u+2192
-Biconditional = operator('Biconditional', '<->', lambda p, q: p is q, True, 2) # u+2194
+And = operator('And', '^', lambda p, q: p and q, True)
+Or = operator('Or', 'v', lambda p, q: p or q, True)
+Xor = operator('Xor', 'XOR', lambda p, q: p is not q, True)
+Nand = operator('Nand', 'NAND', lambda p, q: not (p and q))
+Nor = operator('Nor', 'NOR', lambda p, q: not (p or q))
+Conditional = operator('Conditional', '->', lambda p, q: not p or q, False, 2)
+Biconditional = operator('Biconditional', '<->', lambda p, q: p is q, True, 2)
 
 def get_operation(symbol):
     operations = {
