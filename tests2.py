@@ -392,6 +392,8 @@ class TestParser(unittest.TestCase):
         self.assertTrue(parse('(p v q) ^ r').identical(A(Opq, r)))
         self.assertTrue(parse('p v (q ^ r)').identical(O(p, A(q, r))))
         self.assertTrue(parse('(((p)) v (q ^ (r)))').identical(O(p, A(q, r))))
+        self.assertTrue(parse('(~(p))').identical(Np))
+        self.assertTrue(parse('~(p) v ~(((q) v (r)))').identical(O(Np, N(O(q, r)))))
 
     def test_precedence(self):
         self.assertTrue(parse('p -> q ^ r').identical(C(p, A(q, r))))
@@ -401,7 +403,66 @@ class TestParser(unittest.TestCase):
         self.assertTrue(parse('(p -> q) ^ r ^ s').identical(A(Cpq, r, s)))
         self.assertTrue(parse('(p -> q ^ r) ^ r ^ s').identical(A(C(p, A(q, r)), r, s)))
         self.assertTrue(parse('p v (q -> r ^ s)').identical(O(p, C(q, A(r, s)))))
+        self.assertTrue(parse('p -> q <-> r').identical(E(C(p, q), r)))
+        self.assertTrue(parse('p <-> q -> r').identical(C(E(p, q), r)))
+        self.assertTrue(parse('p -> q <-> r -> s').identical(C(E(C(p, q), r), s)))
+        self.assertTrue(parse('p -> q <-> r XOR s XOR p -> s').identical(C(E(C(p, q), J(r, s, p)), s)))
+        self.assertTrue(parse('p v q <-> q ^ r <-> s v r v q')
+                             .identical(E(O(p, q), A(q, r), O(s, r, q))))
+        self.assertTrue(parse('p <-> q ^ r <-> s v r -> r')
+                              .identical(C(E(p, A(q, r), O(s, r)), r)))
 
+    def test_nested(self):
+        self.assertTrue(parse('((p -> q) -> r) -> s')
+                              .identical(
+                                  C(
+                                    C(
+                                      C(p, q),
+                                      r
+                                    ),
+                                    s)))
+        self.assertTrue(parse('p -> ((q -> r) -> s)')
+                              .identical(
+                                  C(
+                                    p,
+                                    C(
+                                      C(q, r),
+                                      s))))
+        self.assertTrue(parse('p v q | r -> ((q -> r) -> s)')
+                              .identical(
+                                  C(
+                                    D(
+                                      O(p, q),
+                                      r
+                                    ),
+                                    C(
+                                      C(q, r),
+                                      s))))
+
+    def test_ridiculous(self):
+        self.assertTrue(parse(
+            'p v q v r -> (p <-> r) xor q xor (r ^ (r|p and s)) <-> ~(s v r -> (s <-> r))')
+            .identical(
+                E(
+                  C(
+                    O(p, q, r),
+                    J(
+                      E(p, r),
+                      q,
+                      A(
+                        r,
+                        A(
+                          D(r, p),
+                          s))),
+                  ),
+                  N(
+                    C(
+                      O(s, r),
+                      E(s, r))))))
+
+
+
+                  
 # and expecting exceptions?
 
 

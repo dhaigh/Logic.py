@@ -35,26 +35,25 @@ def parse(expression):
 class Parser(object):
     def __init__(self, tokens):
         self.tokens = tokens
-        self.i = 0
         self.terms = []
 
     def read(self):
-        if self.i < len(self.tokens):
-            self.i += 1
-            return self.tokens[self.i-1]
+        if self.tokens:
+            return self.tokens.pop(0)
         return None
 
-    def parse(self, final_op=None):
+    def parse(self, max_precedence=None):
         op = None
 
         while True:
+            toks = list(self.tokens)
             term = self.next_term()
             token = self.read()
 
-            if term is None or token is None:
+            if token is None:
                 if op is None:
                     return term
-                if term:self.terms.append(term)
+                self.terms.append(term)
                 return op(*self.terms)
 
             if not isoperation(token):
@@ -62,32 +61,28 @@ class Parser(object):
 
             next_op = get_operation(token)
 
-            if final_op and next_op.precedence >= final_op.precedence:
-                return 1
+            if max_precedence and next_op.precedence >= max_precedence:
+                self.tokens.insert(0, token)
+                self.terms.append(term)
+                return op(*self.terms)
 
-            if op:
-                if op is next_op:
-                    self.terms.append(term)
-                    op = next_op
-                elif next_op.precedence < op.precedence:
-                    ghost = Parser(self.tokens)
-                    ghost.i = self.i - 2
-                    self.terms.append(next_op(*ghost.parse(op)))
-                    self.i = ghost.i
-                else:
-                    self.terms.append(term)
+            if op and op.precedence > next_op.precedence:
+                p = Parser(toks)
+                self.terms.append(p.parse(op.precedence))
+                self.tokens = p.tokens
+                if not self.tokens:
+                    return op(*self.terms)
+                next_op = get_operation(self.read())
+                if op is not next_op:
                     self.terms = [op(*self.terms)]
-                    op = next_op
             else:
                 self.terms.append(term)
-                op = next_op
-
+                if op and op is not next_op:
+                    self.terms = [op(*self.terms)]
+            op = next_op
 
     def next_term(self):
         token = self.read()
-
-        if token is None:
-            return None
 
         if token == 'T':
             return T
@@ -116,7 +111,7 @@ class Parser(object):
 
             return parse(toks)
 
-        expected('a variable, `~`, or `(`', token)
+        expected('a variable, unconditional, `~`, or `(`', token)
 
 # =============================================================================
 # Expressions
