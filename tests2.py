@@ -86,6 +86,7 @@ class TestExpressionMethods(unittest.TestCase):
         self.assertTrue(T.equivalent(O(p, Np)))
         self.assertTrue(F.equivalent(A(p, Np)))
         self.assertTrue(p.equivalent(N(Np)))
+        self.assertTrue(Np.equivalent(N(N(Np))))
         self.assertTrue(p.equivalent(O(p, F)))
         self.assertTrue(p.equivalent(A(p, T)))
         self.assertTrue(T.equivalent(O(p, T)))
