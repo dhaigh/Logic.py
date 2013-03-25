@@ -7,22 +7,13 @@ root = Tk()
 root.geometry('800x600')
 root.title('Logic.py')
 
+controls = Frame(root)
+
 v = StringVar()
 s = StringVar()
 
 def ev():
-    z = unicode(logic.parse(v.get()))
-    z = z.replace('~', u'\u00ac')
-    z = z.replace(' ^ ', u' \u2227 ')
-    z = z.replace(' v ', u' \u2228 ')
-    z = z.replace(' XOR ', u' \u2295 ')
-    z = z.replace(' NAND ', u' \u2191 ')
-    z = z.replace(' NOR ', u' \u2193 ')
-    z = z.replace(' -> ', u' \u2192 ')
-    z = z.replace(' <-> ', u' \u2194 ')
-    s.set(z)
-
-controls = Frame(root)
+    s.set((logic.parse(v.get())))
 
 fun = Entry(controls, textvariable=v, font=("Helvetica", 24))
 fun.pack(side=LEFT)

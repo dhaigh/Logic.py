@@ -1,10 +1,8 @@
 Todo:
-- clean up the parser (this is almost done)
-- unconditionals as terms (and tests for this)
-- test binary op. append (and make sure it throws an exception is non-associative)
-- more tests for the parser...if i dont go any more insane
+- gui. D:
 
 FUTURE:
+- parser to accept unicode chars
 - tests for all global objects (e.g. wrap, bool_permuatations, operator (making new operators, testing stringification for order etc.))
 - expression classes accepting strings?
 - show working steps?
