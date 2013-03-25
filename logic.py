@@ -6,7 +6,7 @@ import re
 
 lexer_re = re.compile(r'[a-zA-Z]\w*|[~\^()\|]|->|<->|\S+?')
 var_re = re.compile(r'^[a-zA-Z]\w*$')
-operation_re = re.compile(r'^(?:[\^v\|]|AND|OR|XOR|NAND|NOR|->|<->)$', re.I)
+operation_re = re.compile(r'^(?:[\^V\|]|AND|OR|XOR|NAND|NOR|->|<->)$', re.I)
 
 def tokenize(expression):
 	return lexer_re.findall(expression)
@@ -218,7 +218,7 @@ class Not(Operation):
         return 1
 
     def __str__(self):
-        return '~%s' % wrap(self.term)
+        return '%s%s' % (u'\u00ac'.encode('utf-8'), wrap(self.term))
 
     def get_names(self):
         return self.term.get_names()
@@ -245,7 +245,7 @@ class BinaryOperation(Operation):
         return len(self.terms)
 
     def append(self, term):
-        self.terms.append(term)
+        self.terms = self.terms + (term,)
 
     def get_names(self):
         names = []
@@ -255,10 +255,24 @@ class BinaryOperation(Operation):
                     names.append(name)
         return sorted(names)
 
-def operator(name, symbol, rule, associative=False, precedence=1):
+operations = {}
+
+def get_operation(symbol):
+    symbol = symbol.upper()
+    return operations[symbol]
+
+def set_operation(symbol, operation):
+    symbol = symbol.upper()
+    operations[symbol] = operation
+
+def operation(name, rule, unicode_symbol, **kwargs):
+    symbol = kwargs.get('symbol', None)
+    associative = kwargs.get('associative', False)
+    precedence = kwargs.get('precedence', 1)
+
     class BinaryOp(BinaryOperation):
         def __init__(self, *terms):
-            self.terms = list(terms) #map(parse, terms)
+            self.terms = terms
             if len(terms) < 2:
                 raise TypeError('binary operators take at least 2 ' +
                         'arguments (%d given)' % len(terms))
@@ -268,9 +282,10 @@ def operator(name, symbol, rule, associative=False, precedence=1):
                         'associative') % (name, len(terms)))
 
         def __str__(self):
-            wrap_ = lambda term: wrap(term, BinaryOp)
+            wrap_ = lambda t: wrap(t, BinaryOp)
             terms = map(wrap_, self.terms)
-            return (' %s ' % symbol).join(terms)
+            separator = ' %s ' % unicode_symbol.encode('utf-8')
+            return separator.join(terms)
 
         def evaluate(self, variables):
             values = map(lambda t: t.evaluate(variables), self.terms)
@@ -278,8 +293,8 @@ def operator(name, symbol, rule, associative=False, precedence=1):
 
         def identical(self, expression):
             expression = parse(expression)
-            if (not isinstance(expression, BinaryOp) or
-                len(self) != len(expression)):
+            if not isinstance(expression, BinaryOp) or \
+               len(self) != len(expression):
                 return False
             for i, term in enumerate(self):
                 if not term.identical(expression[i]):
@@ -289,28 +304,32 @@ def operator(name, symbol, rule, associative=False, precedence=1):
     BinaryOp.__name__ = name
     BinaryOp.associative = associative
     BinaryOp.precedence = precedence
+
+    set_operation(name, BinaryOp)
+    if symbol:
+        set_operation(symbol, BinaryOp)
+
     return BinaryOp
 
-And = operator('And', '^', lambda p, q: p and q, True)
-Or = operator('Or', 'v', lambda p, q: p or q, True)
-Xor = operator('Xor', 'XOR', lambda p, q: p is not q, True)
-Nand = operator('Nand', 'NAND', lambda p, q: not (p and q))
-Nor = operator('Nor', 'NOR', lambda p, q: not (p or q))
-Conditional = operator('Conditional', '->', lambda p, q: not p or q, False, 2)
-Biconditional = operator('Biconditional', '<->', lambda p, q: p is q, True, 2)
+And = operation('And', lambda p, q: p and q, u'\u2227',
+               symbol='^', associative=True)
 
-def get_operation(symbol):
-    operations = {
-        'and': And, '^': And,
-        'or': Or, 'v': Or,
-        'xor': Xor,
-        'nand': Nand, '|': Nand,
-        'nor': Nor,
-        '->': Conditional,
-        '<->': Biconditional
-    }
-    symbol = symbol.lower()
-    return operations[symbol]
+Or = operation('Or', lambda p, q: p or q, u'\u2228',
+              symbol='v', associative=True)
+
+Xor = operation('Xor', lambda p, q: p is not q, u'\u2295',
+               associative=True)
+
+Nand = operation('Nand', lambda p, q: not (p and q), u'\u2191',
+                symbol='|')
+
+Nor = operation('Nor', lambda p, q: not (p or q), u'\u2193')
+
+Conditional = operation('Conditional', lambda p, q: not p or q, u'\u2192',
+                       symbol='->', precedence=2)
+
+Biconditional = operation('Biconditional', lambda p, q: p is q, u'\u2194',
+                         symbol='<->', associative=True, precedence=2)
 
 # =============================================================================
 # Truth Tables

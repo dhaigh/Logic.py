@@ -1,4 +1,5 @@
 #!/usr/bin/env python2
+# -*- coding: utf-8 -*-
 
 from logic import *
 import unittest
@@ -44,28 +45,28 @@ class TestExpressionMethods(unittest.TestCase):
         self.assertEqual(str(p), 'p')
         self.assertEqual(str(T), 'T')
         self.assertEqual(str(F), 'F')
-        self.assertEqual(str(Np), '~p')
-        self.assertEqual(str(Apq), 'p ^ q')
-        self.assertEqual(str(Opq), 'p v q')
-        self.assertEqual(str(Jpq), 'p XOR q')
-        self.assertEqual(str(Dpq), 'p NAND q')
-        self.assertEqual(str(Xpq), 'p NOR q')
-        self.assertEqual(str(Cpq), 'p -> q')
-        self.assertEqual(str(Epq), 'p <-> q')
-        self.assertEqual(str(Apqr), 'p ^ q ^ r')
-        self.assertEqual(str(Opqr), 'p v q v r')
-        self.assertEqual(str(Jpqr), 'p XOR q XOR r')
-        self.assertEqual(str(Epqr), 'p <-> q <-> r')
-        self.assertEqual(str(A(Opq, Jpq)), '(p v q) ^ (p XOR q)')
-        self.assertEqual(str(A(N(Cpq), Cpq)), '~(p -> q) ^ (p -> q)')
+        self.assertEqual(str(Np), '¬p')
+        self.assertEqual(str(Apq), 'p ∧ q')
+        self.assertEqual(str(Opq), 'p ∨ q')
+        self.assertEqual(str(Jpq), 'p ⊕ q')
+        self.assertEqual(str(Dpq), 'p ↑ q')
+        self.assertEqual(str(Xpq), 'p ↓ q')
+        self.assertEqual(str(Cpq), 'p → q')
+        self.assertEqual(str(Epq), 'p ↔ q')
+        self.assertEqual(str(Apqr), 'p ∧ q ∧ r')
+        self.assertEqual(str(Opqr), 'p ∨ q ∨ r')
+        self.assertEqual(str(Jpqr), 'p ⊕ q ⊕ r')
+        self.assertEqual(str(Epqr), 'p ↔ q ↔ r')
+        self.assertEqual(str(A(Opq, Jpq)), '(p ∨ q) ∧ (p ⊕ q)')
+        self.assertEqual(str(A(N(Cpq), Cpq)), '¬(p → q) ∧ (p → q)')
         self.assertEqual(str(J(Np, O(Epqr, Xpq))),
-						 '~p XOR ((p <-> q <-> r) v (p NOR q))')
-        self.assertEqual(str(C(Apq, Opqr)), 'p ^ q -> p v q v r')
-        self.assertEqual(str(O(C(Apq, p), q, r)), '(p ^ q -> p) v q v r')
-        self.assertEqual(str(E(A(p, q, r), Opq)), 'p ^ q ^ r <-> p v q')
-        self.assertEqual(str(E(A(Apq, r), Opq)), 'p ^ q ^ r <-> p v q')
-        self.assertEqual(str(E(A(Apq, r), Cpq)), 'p ^ q ^ r <-> (p -> q)')
-        self.assertEqual(str(E(A(Apq, r), O(Cpq, q))), 'p ^ q ^ r <-> (p -> q) v q')
+						 '¬p ⊕ ((p ↔ q ↔ r) ∨ (p ↓ q))')
+        self.assertEqual(str(C(Apq, Opqr)), 'p ∧ q → p ∨ q ∨ r')
+        self.assertEqual(str(O(C(Apq, p), q, r)), '(p ∧ q → p) ∨ q ∨ r')
+        self.assertEqual(str(E(A(p, q, r), Opq)), 'p ∧ q ∧ r ↔ p ∨ q')
+        self.assertEqual(str(E(A(Apq, r), Opq)), 'p ∧ q ∧ r ↔ p ∨ q')
+        self.assertEqual(str(E(A(Apq, r), Cpq)), 'p ∧ q ∧ r ↔ (p → q)')
+        self.assertEqual(str(E(A(Apq, r), O(Cpq, q))), 'p ∧ q ∧ r ↔ (p → q) ∨ q')
 
     def test_get_names(self):
         self.assertEqual(p.get_names(), ['p'])
@@ -240,8 +241,8 @@ class TestExpressionMethods(unittest.TestCase):
 
 class TestBinaryOperations(unittest.TestCase):
     def test_init(self):
-        self.assertEqual(Apq.terms, [p, q])
-        self.assertEqual(Opqr.terms, [p, q, r])
+        self.assertEqual(Apq.terms, (p, q))
+        self.assertEqual(Opqr.terms, (p, q, r))
 
     def test_getitem(self):
         self.assertIs(Apq[0], p)
@@ -261,7 +262,7 @@ class TestBinaryOperations(unittest.TestCase):
             terms = []
             for term in expr:
                 terms.append(term)
-            self.assertEqual(terms, expr.terms)
+            self.assertEqual(tuple(terms), expr.terms)
 
     def test_append(self):
         exprs = [A(p, q, r, s), J(p, q), X(p, q), C(J(p, q), X(p, s))]
@@ -463,7 +464,6 @@ class TestParser(unittest.TestCase):
 
 
 
-                  
 # and expecting exceptions?
 
 
