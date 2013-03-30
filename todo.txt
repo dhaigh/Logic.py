@@ -1,9 +1,10 @@
 Todo:
 - gui. D:
+- tests for extra symbols
 
 FUTURE:
 - parser to accept unicode chars
-- tests for all global objects (e.g. wrap, bool_permuatations, operator (making new operators, testing stringification for order etc.))
+- tests for all global objects (e.g. wrap, bool_permuatations, operator, tokenize (making new operators, testing stringification for order etc.))
 - expression classes accepting strings?
 - show working steps?
 - CLI + GUI
