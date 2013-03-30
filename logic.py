@@ -376,6 +376,13 @@ if __name__ == '__main__':
     while 1:
         expr = raw_input('Enter an expression: ')
         print
-        print TruthTable(expr)
+
+        try:
+            tt = TruthTable(expr)
+        except Exception as e:
+            print 'Error:', e
+        else:
+            print tt
+
         print '-' * 80
 
