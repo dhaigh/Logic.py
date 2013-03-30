@@ -6,7 +6,7 @@ import re
 # Parser
 # =============================================================================
 
-lexer_re = re.compile(r'[a-zA-Z]\w*|[~()]|[^\w\s]+')
+lexer_re = re.compile(r'[a-zA-Z]\w*|[~()]|[^~()\w\s]+')
 var_re = re.compile(r'^[a-zA-Z]\w*$')
 
 def tokenize(expression):
