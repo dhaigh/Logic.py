@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 from logic import *
@@ -363,6 +363,18 @@ class TestParser(unittest.TestCase):
         self.assertTrue(parse('p->    q   ').identical(Cpq))
         self.assertTrue(parse(' p   ^q^ r').identical(Apqr))
         self.assertTrue(parse(' p   <->q<-> r').identical(Epqr))
+        self.assertTrue(parse('p->~q').identical(C(p, Nq)))
+        self.assertTrue(parse('~p->~q').identical(C(Np, Nq)))
+        self.assertTrue(parse('~p|~q').identical(D(Np, Nq)))
+        self.assertTrue(parse('p->(q)').identical(Cpq))
+        self.assertTrue(parse('p->~(q)').identical(C(p, Nq)))
+        self.assertTrue(parse('p^~q').identical(A(p, Nq)))
+        self.assertTrue(parse('p^~(q)').identical(A(p, Nq)))
+        self.assertTrue(parse('(~p)^~q').identical(A(Np, Nq)))
+        self.assertTrue(parse('(~p)^~q^(r)').identical(A(Np, Nq, r)))
+        self.assertTrue(parse('(p)^~q^(r)').identical(A(p, Nq, r)))
+        self.assertTrue(parse('(p)<->~q->(r)').identical(C(E(p, Nq), r)))
+        self.assertTrue(parse('~(p)<->~q->~~(r)').identical(C(E(Np, Nq), N(Nr))))
 
     def test_unconditionals(self):
         self.assertTrue(parse('T').identical(T))
