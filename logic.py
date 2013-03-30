@@ -1,25 +1,21 @@
+#!/usr/bin/env python
+
 import re
 
 # =============================================================================
 # Parser
 # =============================================================================
 
-lexer_re = re.compile(r'[a-zA-Z]\w*|[~\^()\|]|->|<->|\S+?')
+lexer_re = re.compile(r'[a-zA-Z]\w*|[~()]|[^\w\s]+')
 var_re = re.compile(r'^[a-zA-Z]\w*$')
-operation_re = re.compile(r'^(?:[\^V\|]|AND|OR|XOR|NAND|NOR|->|<->)$', re.I)
 
 def tokenize(expression):
-	return lexer_re.findall(expression)
+    return lexer_re.findall(expression)
 
 def isvar(token):
     if token is None:
         return None
     return var_re.match(token)
-
-def isoperation(token):
-    if token is None:
-        return None
-    return operation_re.match(token)
 
 def expected(expected, saw=None):
     saw = '`%s`' % saw if saw else 'EOE'
@@ -56,10 +52,10 @@ class Parser(object):
                 self.terms.append(term)
                 return op(*self.terms)
 
-            if not isoperation(token):
-                expected('an operation or EOE', token)
-
             next_op = get_operation(token)
+
+            if next_op is None:
+                expected('an operation or EOE', token)
 
             if max_precedence and next_op.precedence >= max_precedence:
                 self.tokens.insert(0, token)
@@ -259,14 +255,15 @@ operations = {}
 
 def get_operation(symbol):
     symbol = symbol.upper()
+    if symbol not in operations:
+        return None
     return operations[symbol]
 
 def set_operation(symbol, operation):
     symbol = symbol.upper()
     operations[symbol] = operation
 
-def operation(name, rule, unicode_symbol, **kwargs):
-    symbol = kwargs.get('symbol', None)
+def operation(name, rule, unicode_symbol, *symbols, **kwargs):
     associative = kwargs.get('associative', False)
     precedence = kwargs.get('precedence', 1)
 
@@ -306,30 +303,30 @@ def operation(name, rule, unicode_symbol, **kwargs):
     BinaryOp.precedence = precedence
 
     set_operation(name, BinaryOp)
-    if symbol:
+    for symbol in symbols:
         set_operation(symbol, BinaryOp)
 
     return BinaryOp
 
 And = operation('And', lambda p, q: p and q, u'\u2227',
-               symbol='^', associative=True)
+                '^', associative=True)
 
 Or = operation('Or', lambda p, q: p or q, u'\u2228',
-              symbol='v', associative=True)
+               'v', associative=True)
 
 Xor = operation('Xor', lambda p, q: p is not q, u'\u2295',
-               associative=True)
+                associative=True)
 
 Nand = operation('Nand', lambda p, q: not (p and q), u'\u2191',
-                symbol='|')
+                 '|')
 
 Nor = operation('Nor', lambda p, q: not (p or q), u'\u2193')
 
 Conditional = operation('Conditional', lambda p, q: not p or q, u'\u2192',
-                       symbol='->', precedence=2)
+                        '->', '-->', precedence=2)
 
 Biconditional = operation('Biconditional', lambda p, q: p is q, u'\u2194',
-                         symbol='<->', associative=True, precedence=2)
+                          '<->', '<-->', associative=True, precedence=2)
 
 # =============================================================================
 # Truth Tables
@@ -374,4 +371,11 @@ class TruthTable(object):
             value = self.expression.evaluate(variables)
             self.rows.append((perm, value))
             self.values.append(value)
+
+if __name__ == '__main__':
+    while 1:
+        expr = raw_input('Enter an expression: ')
+        print
+        print TruthTable(expr)
+        print '-' * 80
 
