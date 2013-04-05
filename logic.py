@@ -324,10 +324,11 @@ Nand = operation('Nand', lambda p, q: not (p and q), u'\u2191',
 Nor = operation('Nor', lambda p, q: not (p or q), u'\u2193')
 
 Conditional = operation('Conditional', lambda p, q: not p or q, u'\u2192',
-                        '->', '-->', precedence=2)
+                        '->', '-->', '=>', '==>', precedence=2)
 
 Biconditional = operation('Biconditional', lambda p, q: p is q, u'\u2194',
-                          '<->', '<-->', associative=True, precedence=2)
+                          '<->', '<-->', '<=>', '<==>',
+                          associative=True, precedence=2)
 
 # =============================================================================
 # Truth Tables
@@ -341,7 +342,7 @@ def bool_permutations(n):
         return [[]]
 
     perms = []
-    sub_perms = bool_permutations(n - 1)
+    sub_perms = bool_permutations(n-1)
     for value in (True, False):
         for perm in sub_perms:
             perms.append([value] + perm)
