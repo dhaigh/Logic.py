@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import re
+import prettytable
 
 # =============================================================================
 # Parser
@@ -346,30 +347,20 @@ def bool_permutations(n):
             perms.append([value] + perm)
     return perms
 
-class TruthTable(object):
+class TruthTable(prettytable.Table):
     def __init__(self, expression):
-        self.expression = parse(expression)
-        self.rows = []
+        expression = parse(expression)
+        names = expression.get_names()
+        header = names + [str(expression)]
+        super(TruthTable, self).__init__(header)
+
+        self.expression = expression
         self.values = []
-        self.build()
 
-    def __str__(self):
-        def row_str(cells):
-            tf = {True: 'T', False: 'F'}
-            cells = map(lambda x: tf.get(x, x), cells)
-            return ' | '.join(cells) + '\n'
-
-        rows = map(lambda r: r[0] + [r[1]], self.rows)
-        output = row_str(self.expression.get_names() + [str(self.expression)])
-        output += ''.join(map(row_str, rows))
-        return output
-
-    def build(self):
-        names = self.expression.get_names()
         for perm in bool_permutations(len(names)):
             variables = dict(zip(names, perm))
-            value = self.expression.evaluate(variables)
-            self.rows.append((perm, value))
+            value = expression.evaluate(variables)
+            self.append(perm + [value])
             self.values.append(value)
 
 if __name__ == '__main__':
