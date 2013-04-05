@@ -285,31 +285,34 @@ class TestTruthTable(unittest.TestCase):
 
         self.assertIs(tt_p.expression, p)
         self.assertIs(tt_Apq.expression, Apq)
-        self.assertEqual(tt_p.rows, [([t], t), ([f], f)])
+        self.assertEqual(tt_p.rows, [
+            'T T'.split(),
+            'F F'.split(),
+        ])
         self.assertEqual(tt_Apq.rows, [
-            ([t,t], t),
-            ([t,f], f),
-            ([f,t], f),
-            ([f,f], f)
+            'T T T'.split(),
+            'T F F'.split(),
+            'F T F'.split(),
+            'F F F'.split()
         ])
         self.assertEqual(tt_Apqr.rows, [
-            ([t,t,t], t),
-            ([t,t,f], f),
-            ([t,f,t], f),
-            ([t,f,f], f),
-            ([f,t,t], f),
-            ([f,t,f], f),
-            ([f,f,t], f),
-            ([f,f,f], f)
+            'T T T T'.split(),
+            'T T F F'.split(),
+            'T F T F'.split(),
+            'T F F F'.split(),
+            'F T T F'.split(),
+            'F T F F'.split(),
+            'F F T F'.split(),
+            'F F F F'.split()
         ])
         self.assertEqual(tt_Cpq.rows, [
-            ([t,t], t),
-            ([t,f], f),
-            ([f,t], t),
-            ([f,f], t)
+            'T T T'.split(),
+            'T F F'.split(),
+            'F T T'.split(),
+            'F F T'.split()
         ])
-        self.assertEqual(TruthTable(T).rows, [([], t)])
-        self.assertEqual(TruthTable(F).rows, [([], f)])
+        self.assertEqual(TruthTable(T).rows, [['T']])
+        self.assertEqual(TruthTable(F).rows, [['F']])
         self.assertEqual(tt_p.values, [t, f])
         self.assertEqual(tt_Apq.values, [t, f, f, f])
         self.assertEqual(tt_Apqr.values, [t, f, f, f, f, f, f, f])
