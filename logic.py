@@ -197,10 +197,8 @@ def wrap(term, op=None):
     if (# never put brackets around T/F, p, or ~p
         not isinstance(term, BinaryOperation) or
         # operations with higher precedence
-        (op and op.precedence > type(term).precedence) or
-        # associative operations of the same type
-        (op and op.associative and isinstance(term, op))):
-        return '%s' % term
+        (op and op.precedence > type(term).precedence)):
+        return str(term)
     return '(%s)' % term
 
 class Operation(Expression):
@@ -242,7 +240,7 @@ class BinaryOperation(Operation):
         return len(self.terms)
 
     def append(self, term):
-        self.terms = self.terms + (term,)
+        self.terms.append(term)
 
     def get_names(self):
         names = []
@@ -270,7 +268,7 @@ def operation(name, rule, unicode_symbol, *symbols, **kwargs):
 
     class BinaryOp(BinaryOperation):
         def __init__(self, *terms):
-            self.terms = terms
+            self.terms = list(terms)
             if len(terms) < 2:
                 raise TypeError('binary operators take at least 2 ' +
                         'arguments (%d given)' % len(terms))
@@ -303,32 +301,32 @@ def operation(name, rule, unicode_symbol, *symbols, **kwargs):
     BinaryOp.associative = associative
     BinaryOp.precedence = precedence
 
-    set_operation(name, BinaryOp)
     for symbol in symbols:
         set_operation(symbol, BinaryOp)
 
     return BinaryOp
 
 And = operation('And', lambda p, q: p and q, u'\u2227',
-                '^', associative=True)
+                'AND', '^', associative=True)
 
 Or = operation('Or', lambda p, q: p or q, u'\u2228',
-               'v', associative=True)
+               'OR', 'v', '||', associative=True)
 
 Xor = operation('Xor', lambda p, q: p is not q, u'\u2295',
-                associative=True)
+                'XOR', associative=True)
 
 Nand = operation('Nand', lambda p, q: not (p and q), u'\u2191',
-                 '|')
+                 'NAND', '|')
 
-Nor = operation('Nor', lambda p, q: not (p or q), u'\u2193')
+Nor = operation('Nor', lambda p, q: not (p or q), u'\u2193',
+                'NOR')
 
 Conditional = operation('Conditional', lambda p, q: not p or q, u'\u2192',
                         '->', '-->', '=>', '==>', precedence=2)
 
 Biconditional = operation('Biconditional', lambda p, q: p is q, u'\u2194',
-                          '<->', '<-->', '<=>', '<==>',
-                          associative=True, precedence=2)
+                          '<->', '<-->', '<=>', '<==>', '=', '==', 'eq',
+                          associative=True, precedence=3)
 
 # =============================================================================
 # Truth Tables
@@ -364,6 +362,60 @@ class TruthTable(prettytable.Table):
             self.append(perm + [value])
             self.values.append(value)
 
+# =============================================================================
+# Simplifier
+# =============================================================================
+
+def double_negative(expr):
+    if isinstance(expr, Not) and \
+       isinstance(expr.term, Not):
+        return expr.term.term
+    return expr
+
+def implication(expr):
+    if isinstance(expr, Conditional):
+        return Or(Not(expr[0]), expr[1])
+    return expr
+
+def double_implication(expr):
+    if isinstance(expr, Biconditional):
+        if len(expr) == 2:
+            return And(Conditional(expr[0], expr[1]),
+                       Conditional(expr[1], expr[0]))
+        terms = list(expr.terms)
+        simple = Biconditional(terms.pop(0), terms.pop(0))
+        while terms:
+            simple = Biconditional(simple, terms.pop(0))
+        return simple
+    return expr
+
+rules = [
+    double_negative,
+    implication,
+    double_implication
+]
+
+def simplify(exp):
+    exp = parse(exp)
+
+    if isinstance(exp, Var):
+        return [exp]
+
+    if isinstance(expr, BinaryOperation):
+        for i, term in enumerate(expr):
+            expr.terms[i] = simplify(term)[-1]
+
+    for rule in rules:
+        simpler = rule(exp)
+        if simpler is not exp:
+            return [exp] + simplify(simpler)
+
+    return [exp]
+
+# =============================================================================
+# Sample REPL
+# =============================================================================
+
 if __name__ == '__main__':
     while 1:
         expr = raw_input('Enter an expression: ')
@@ -376,5 +428,10 @@ if __name__ == '__main__':
         else:
             print tt
 
-        print '-' * 80
+        print 'Simplification steps:'
+        for n, simple in enumerate(simplify(expr), 1):
+            print n, simple
+
+        print
+        print '-' * 40
 

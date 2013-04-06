@@ -60,13 +60,13 @@ class TestExpressionMethods(unittest.TestCase):
         self.assertEqual(str(A(Opq, Jpq)), '(p ∨ q) ∧ (p ⊕ q)')
         self.assertEqual(str(A(N(Cpq), Cpq)), '¬(p → q) ∧ (p → q)')
         self.assertEqual(str(J(Np, O(Epqr, Xpq))),
-						 '¬p ⊕ ((p ↔ q ↔ r) ∨ (p ↓ q))')
+                         '¬p ⊕ ((p ↔ q ↔ r) ∨ (p ↓ q))')
         self.assertEqual(str(C(Apq, Opqr)), 'p ∧ q → p ∨ q ∨ r')
         self.assertEqual(str(O(C(Apq, p), q, r)), '(p ∧ q → p) ∨ q ∨ r')
         self.assertEqual(str(E(A(p, q, r), Opq)), 'p ∧ q ∧ r ↔ p ∨ q')
-        self.assertEqual(str(E(A(Apq, r), Opq)), 'p ∧ q ∧ r ↔ p ∨ q')
-        self.assertEqual(str(E(A(Apq, r), Cpq)), 'p ∧ q ∧ r ↔ (p → q)')
-        self.assertEqual(str(E(A(Apq, r), O(Cpq, q))), 'p ∧ q ∧ r ↔ (p → q) ∨ q')
+        self.assertEqual(str(E(A(Apq, r), Opq)), '(p ∧ q) ∧ r ↔ p ∨ q')
+        self.assertEqual(str(E(A(Apq, r), Cpq)), '(p ∧ q) ∧ r ↔ p → q')
+        self.assertEqual(str(E(A(Apq, r), O(Cpq, q))), '(p ∧ q) ∧ r ↔ (p → q) ∨ q')
 
     def test_get_names(self):
         self.assertEqual(p.get_names(), ['p'])
@@ -229,6 +229,7 @@ class TestExpressionMethods(unittest.TestCase):
         self.assertTrue(T.is_tautology())
         self.assertTrue(C(A(Cpq, p), p).is_tautology())
         self.assertTrue(O(p, Np).is_tautology())
+        self.assertTrue(E(E(p, q, r), E(E(p, q), r)).is_tautology())
 
     def test_contradiction(self):
         self.assertTrue(F.is_contradiction())
@@ -241,8 +242,8 @@ class TestExpressionMethods(unittest.TestCase):
 
 class TestBinaryOperations(unittest.TestCase):
     def test_init(self):
-        self.assertEqual(Apq.terms, (p, q))
-        self.assertEqual(Opqr.terms, (p, q, r))
+        self.assertEqual(Apq.terms, [p, q])
+        self.assertEqual(Opqr.terms, [p, q, r])
 
     def test_getitem(self):
         self.assertIs(Apq[0], p)
@@ -262,7 +263,7 @@ class TestBinaryOperations(unittest.TestCase):
             terms = []
             for term in expr:
                 terms.append(term)
-            self.assertEqual(tuple(terms), expr.terms)
+            self.assertEqual(terms, expr.terms)
 
     def test_append(self):
         exprs = [A(p, q, r, s), J(p, q), X(p, q), C(J(p, q), X(p, s))]
@@ -376,8 +377,8 @@ class TestParser(unittest.TestCase):
         self.assertTrue(parse('(~p)^~q').identical(A(Np, Nq)))
         self.assertTrue(parse('(~p)^~q^(r)').identical(A(Np, Nq, r)))
         self.assertTrue(parse('(p)^~q^(r)').identical(A(p, Nq, r)))
-        self.assertTrue(parse('(p)<->~q->(r)').identical(C(E(p, Nq), r)))
-        self.assertTrue(parse('~(p)<->~q->~~(r)').identical(C(E(Np, Nq), N(Nr))))
+        self.assertTrue(parse('(p)<->~q->(r)').identical(E(p, C(Nq, r))))
+        self.assertTrue(parse('~(p)<->~q->~~(r)').identical(E(Np, C(Nq, N(Nr)))))
 
     def test_unconditionals(self):
         self.assertTrue(parse('T').identical(T))
@@ -421,13 +422,14 @@ class TestParser(unittest.TestCase):
         self.assertTrue(parse('(p -> q ^ r) ^ r ^ s').identical(A(C(p, A(q, r)), r, s)))
         self.assertTrue(parse('p v (q -> r ^ s)').identical(O(p, C(q, A(r, s)))))
         self.assertTrue(parse('p -> q <-> r').identical(E(C(p, q), r)))
-        self.assertTrue(parse('p <-> q -> r').identical(C(E(p, q), r)))
-        self.assertTrue(parse('p -> q <-> r -> s').identical(C(E(C(p, q), r), s)))
-        self.assertTrue(parse('p -> q <-> r XOR s XOR p -> s').identical(C(E(C(p, q), J(r, s, p)), s)))
+        self.assertTrue(parse('p <-> q -> r').identical(E(p, C(q, r))))
+        self.assertTrue(parse('p -> q <-> r -> s').identical(E(Cpq, C(r, s))))
+        self.assertTrue(parse('p -> q <-> r XOR s XOR p -> s').identical(
+            E(C(p, q), C(J(r, s, p), s))))
         self.assertTrue(parse('p v q <-> q ^ r <-> s v r v q')
                              .identical(E(O(p, q), A(q, r), O(s, r, q))))
         self.assertTrue(parse('p <-> q ^ r <-> s v r -> r')
-                              .identical(C(E(p, A(q, r), O(s, r)), r)))
+                              .identical(E(p, A(q, r), C(O(s, r), r))))
 
     def test_nested(self):
         self.assertTrue(parse('((p -> q) -> r) -> s')
