@@ -10,8 +10,8 @@ import prettytable
 lexer_re = re.compile(r'[a-zA-Z]\w*|[~()]|[^~()\w\s]+')
 var_re = re.compile(r'^[a-zA-Z]\w*$')
 
-def tokenize(expression):
-    return lexer_re.findall(expression)
+def tokenize(expr):
+    return lexer_re.findall(expr)
 
 def isvar(token):
     if token is None:
@@ -22,12 +22,12 @@ def expected(expected, saw=None):
     saw = '`%s`' % saw if saw else 'EOE'
     raise SyntaxError('expected %s, saw %s' % (expected, saw))
 
-def parse(expression):
-    if isinstance(expression, Expression):
-        return expression
-    if isinstance(expression, str):
-        expression = tokenize(expression)
-    return Parser(expression).parse()
+def parse(expr):
+    if isinstance(expr, Expression):
+        return expr
+    if isinstance(expr, str):
+        expr = tokenize(expr)
+    return Parser(expr).parse()
 
 class Parser(object):
     def __init__(self, tokens):
@@ -115,10 +115,10 @@ class Parser(object):
 # =============================================================================
 
 class Expression(object):
-    def __eq__(self, expression):
-        if not isinstance(expression, Expression):
+    def __eq__(self, expr):
+        if not isinstance(expr, Expression):
             return False
-        return self.equivalent(expression)
+        return self.equivalent(expr)
 
     def __len__(self):
         raise NotImplementedError
@@ -129,14 +129,14 @@ class Expression(object):
     def get_names(self):
         raise NotImplementedError
 
-    def equivalent(self, expression):
-        expression = parse(expression)
-        return Biconditional(self, expression).is_tautology()
+    def equivalent(self, expr):
+        expr = parse(expr)
+        return Biconditional(self, expr).is_tautology()
 
     def evaluate(self, variables):
         raise NotImplementedError
 
-    def identical(self, expression):
+    def identical(self, expr):
         raise NotImplementedError
 
     def is_contradiction(self):
@@ -162,11 +162,11 @@ class Unconditional(Expression):
     def evaluate(self, _=None):
         return self.value
 
-    def identical(self, expression):
-        expression = parse(expression)
-        if not isinstance(expression, Unconditional):
+    def identical(self, expr):
+        expr = parse(expr)
+        if not isinstance(expr, Unconditional):
             return False
-        return expression.value == self.value
+        return expr.value == self.value
 
 T = Unconditional('T', True)
 F = Unconditional('F', False)
@@ -187,11 +187,11 @@ class Var(Expression):
     def evaluate(self, variables):
         return variables[self.name]
 
-    def identical(self, expression):
-        expression = parse(expression)
-        if not isinstance(expression, Var):
+    def identical(self, expr):
+        expr = parse(expr)
+        if not isinstance(expr, Var):
             return False
-        return self.name == expression.name
+        return self.name == expr.name
 
 def wrap(term, op=None):
     if (# never put brackets around T/F, p, or ~p
@@ -222,11 +222,11 @@ class Not(Operation):
         term = self.term.evaluate(variables)
         return not term
 
-    def identical(self, expression):
-        expression = parse(expression)
-        if not isinstance(expression, Not):
+    def identical(self, expr):
+        expr = parse(expr)
+        if not isinstance(expr, Not):
             return False
-        return self.term.identical(expression.term)
+        return self.term.identical(expr.term)
 
 class BinaryOperation(Operation):
     def __getitem__(self, index):
@@ -287,13 +287,13 @@ def operation(name, rule, unicode_symbol, *symbols, **kwargs):
             values = map(lambda t: t.evaluate(variables), self.terms)
             return reduce(rule, values)
 
-        def identical(self, expression):
-            expression = parse(expression)
-            if not isinstance(expression, BinaryOp) or \
-               len(self) != len(expression):
+        def identical(self, expr):
+            expr = parse(expr)
+            if not isinstance(expr, BinaryOp) or \
+               len(self) != len(expr):
                 return False
             for i, term in enumerate(self):
-                if not term.identical(expression[i]):
+                if not term.identical(expr[i]):
                     return False
             return True
 
@@ -347,18 +347,18 @@ def bool_permutations(n):
     return perms
 
 class TruthTable(prettytable.Table):
-    def __init__(self, expression):
-        expression = parse(expression)
-        names = expression.get_names()
-        header = names + [str(expression)]
+    def __init__(self, expr):
+        expr = parse(expr)
+        names = expr.get_names()
+        header = names + [str(expr)]
         super(TruthTable, self).__init__(header)
 
-        self.expression = expression
+        self.expression = expr
         self.values = []
 
         for perm in bool_permutations(len(names)):
             variables = dict(zip(names, perm))
-            value = expression.evaluate(variables)
+            value = expr.evaluate(variables)
             self.append(perm + [value])
             self.values.append(value)
 
@@ -395,22 +395,22 @@ rules = [
     double_implication
 ]
 
-def simplify(exp):
-    exp = parse(exp)
+def simplify(expr):
+    expr = parse(expr)
 
-    if isinstance(exp, Var):
-        return [exp]
+    if isinstance(expr, Var):
+        return [expr]
 
     if isinstance(expr, BinaryOperation):
         for i, term in enumerate(expr):
             expr.terms[i] = simplify(term)[-1]
 
     for rule in rules:
-        simpler = rule(exp)
-        if simpler is not exp:
-            return [exp] + simplify(simpler)
+        simpler = rule(expr)
+        if simpler is not expr:
+            return [expr] + simplify(simpler)
 
-    return [exp]
+    return [expr]
 
 # =============================================================================
 # Sample REPL
