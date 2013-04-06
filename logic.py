@@ -396,19 +396,36 @@ rules = [
 ]
 
 def simplify(expr):
-    expr = parse(expr)
+    for rule in rules:
+        new = rule(expr)
+        if new is not expr:
+            return new
 
-    if isinstance(expr, Var):
-        return [expr]
+    if not isinstance(expr, Operation):
+        return expr
+
+    if isinstance(expr, Not):
+        term = simplify(expr.term)
+        new = Not(term)
+        if not new.identical(expr):
+            return new
 
     if isinstance(expr, BinaryOperation):
-        for i, term in enumerate(expr):
-            expr.terms[i] = simplify(term)[-1]
+        terms = list(expr.terms)
+        for i, term in enumerate(terms):
+            terms[i] = simplify(term)
+        new = type(expr)(*terms)
+        if not new.identical(expr):
+            return new
 
-    for rule in rules:
-        simpler = rule(expr)
-        if simpler is not expr:
-            return [expr] + simplify(simpler)
+    return expr
+
+def simplification_steps(expr):
+    expr = parse(expr)
+
+    simpler = simplify(expr)
+    if simpler is not expr:
+        return [expr] + simplification_steps(simpler)
 
     return [expr]
 
@@ -429,7 +446,7 @@ if __name__ == '__main__':
             print tt
 
         print 'Simplification steps:'
-        for n, simple in enumerate(simplify(expr), 1):
+        for n, simple in enumerate(simplification_steps(expr), 1):
             print n, simple
 
         print
