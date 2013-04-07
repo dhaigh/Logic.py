@@ -89,7 +89,7 @@ class Parser(object):
         if isvar(token):
             return Var(token)
 
-        if token == '~':
+        if token == '~' or token == u'\u00ac'.encode('utf-8'):
             return Not(self.next_term())
 
         if token == '(':
@@ -265,6 +265,7 @@ def set_operation(symbol, operation):
 def operation(name, rule, unicode_symbol, *symbols, **kwargs):
     associative = kwargs.get('associative', False)
     precedence = kwargs.get('precedence', 1)
+    unicode_symbol = unicode_symbol.encode('utf-8')
 
     class BinaryOp(BinaryOperation):
         def __init__(self, *terms):
@@ -280,7 +281,7 @@ def operation(name, rule, unicode_symbol, *symbols, **kwargs):
         def __str__(self):
             wrap_ = lambda t: wrap(t, BinaryOp)
             terms = map(wrap_, self.terms)
-            separator = ' %s ' % unicode_symbol.encode('utf-8')
+            separator = ' %s ' % unicode_symbol
             return separator.join(terms)
 
         def evaluate(self, variables):
@@ -301,6 +302,7 @@ def operation(name, rule, unicode_symbol, *symbols, **kwargs):
     BinaryOp.associative = associative
     BinaryOp.precedence = precedence
 
+    set_operation(unicode_symbol, BinaryOp)
     for symbol in symbols:
         set_operation(symbol, BinaryOp)
 
@@ -366,6 +368,46 @@ class TruthTable(prettytable.Table):
 # Simplifier
 # =============================================================================
 
+def unconditionals(expr):
+    if isinstance(expr, And):
+        for term in expr:
+            if term is F:
+                return F
+        if T not in expr:
+            return expr
+        terms = list(expr.terms)
+        while T in terms:
+            terms.remove(T)
+        if len(terms) == 0:
+            return T
+        if len(terms) == 1:
+            return terms[0]
+        return And(*terms)
+    if isinstance(expr, Or):
+        for term in expr:
+            if term is T:
+                return T
+        if F not in expr:
+            return expr
+        terms = list(expr.terms)
+        while F in terms:
+            terms.remove(F)
+        if len(terms) == 0:
+            return F
+        if len(terms) == 1:
+            return terms[0]
+        return Or(*terms)
+    return expr
+
+def negate_unconditional(expr):
+    if isinstance(expr, Not):
+        if expr.term is T:
+            return F
+        if expr.term is F:
+            return T
+        return expr
+    return expr
+
 def double_negative(expr):
     if isinstance(expr, Not) and \
        isinstance(expr.term, Not):
@@ -389,16 +431,46 @@ def double_implication(expr):
         return simple
     return expr
 
+def nand_nor(expr):
+    if isinstance(expr, Nand):
+        return Not(And(*expr.terms))
+    if isinstance(expr, Nor):
+        return Not(Or(*expr.terms))
+    return expr
+
+def not_expand(expr):
+    if isinstance(expr, Not) and \
+       isinstance(expr.term, (And, Or)):
+        terms = list(expr.term.terms)
+        terms = map(Not, terms)
+        return type(expr.term)(*terms)
+    return expr
+
+def distributive(expr):
+    if not isinstance(expr, (And, Or)):
+        return expr
+    # investigate this..
+    if len(expr) > 2:
+        return expr
+    term1, term2 = expr[0], expr[1]
+    op_outer = type(expr)
+    return expr
+
 rules = [
+    unconditionals,
+    negate_unconditional,
     double_negative,
     implication,
-    double_implication
+    double_implication,
+    nand_nor,
+    not_expand,
+    distributive
 ]
 
 def simplify(expr):
     for rule in rules:
         new = rule(expr)
-        if new is not expr:
+        if not new.identical(expr):
             return new
 
     if not isinstance(expr, Operation):
@@ -409,8 +481,7 @@ def simplify(expr):
         new = Not(term)
         if not new.identical(expr):
             return new
-
-    if isinstance(expr, BinaryOperation):
+    else:
         terms = list(expr.terms)
         for i, term in enumerate(terms):
             terms[i] = simplify(term)
@@ -439,16 +510,15 @@ if __name__ == '__main__':
         print
 
         try:
-            tt = TruthTable(expr)
+            expr = parse(expr)
         except Exception as e:
             print 'Error:', e
         else:
-            print tt
+            print 'Truth table:'
+            print TruthTable(expr)
+            print 'Simplification steps:'
+            for n, simple in enumerate(simplification_steps(expr), 1):
+                print n, simple
 
-        print 'Simplification steps:'
-        for n, simple in enumerate(simplification_steps(expr), 1):
-            print n, simple
-
-        print
-        print '-' * 40
+        print '-' * 80
 
