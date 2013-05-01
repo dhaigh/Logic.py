@@ -193,11 +193,12 @@ class Var(Expression):
             return False
         return self.name == expr.name
 
-def wrap(term, op=None):
-    if (# never put brackets around T/F, p, or ~p
-        not isinstance(term, BinaryOperation) or
+def wrap(term, op):
+    if (# never put brackets around T/F or p
+        isinstance(term, (Unconditional, Var)) or
+        (type(term) is Not and op is not Not) or
         # operations with higher precedence
-        (op and op.precedence > type(term).precedence)):
+        (isinstance(op, BinaryOperation) and op.precedence > type(term).precedence)):
         return str(term)
     return '(%s)' % term
 
@@ -213,7 +214,7 @@ class Not(Operation):
         return 1
 
     def __str__(self):
-        return '%s%s' % (u'\u00ac'.encode('utf-8'), wrap(self.term))
+        return '\xc2\xac' + wrap(self.term, Not)
 
     def get_names(self):
         return self.term.get_names()
