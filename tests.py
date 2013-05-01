@@ -46,6 +46,7 @@ class TestExpressionMethods(unittest.TestCase):
         self.assertEqual(str(T), 'T')
         self.assertEqual(str(F), 'F')
         self.assertEqual(str(Np), '¬p')
+        self.assertEqual(str(N(Np)), '¬(¬p)')
         self.assertEqual(str(Apq), 'p ∧ q')
         self.assertEqual(str(Opq), 'p ∨ q')
         self.assertEqual(str(Jpq), 'p ⊕ q')

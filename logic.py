@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
-import re
 import prettytable
+import re
+import sys
 
 # =============================================================================
 # Parser
@@ -196,9 +197,10 @@ class Var(Expression):
 def wrap(term, op):
     if (# never put brackets around T/F or p
         isinstance(term, (Unconditional, Var)) or
+        # wrap brackets around inner nots
         (type(term) is Not and op is not Not) or
         # operations with higher precedence
-        (isinstance(op, BinaryOperation) and op.precedence > type(term).precedence)):
+        (issubclass(op, BinaryOperation) and op.precedence > type(term).precedence)):
         return str(term)
     return '(%s)' % term
 
@@ -313,7 +315,7 @@ And = operation('And', lambda p, q: p and q, u'\u2227',
                 'AND', '^', associative=True)
 
 Or = operation('Or', lambda p, q: p or q, u'\u2228',
-               'OR', 'v', '||', associative=True)
+               'OR', 'v', associative=True)
 
 Xor = operation('Xor', lambda p, q: p is not q, u'\u2295',
                 'XOR', associative=True)
@@ -328,7 +330,7 @@ Conditional = operation('Conditional', lambda p, q: not p or q, u'\u2192',
                         '->', '-->', '=>', '==>', precedence=2)
 
 Biconditional = operation('Biconditional', lambda p, q: p is q, u'\u2194',
-                          '<->', '<-->', '<=>', '<==>', '=', '==', 'eq',
+                          '<->', '<-->', '<=>', '<==>', '=', '==', 'eq', 'NXOR',
                           associative=True, precedence=3)
 
 # =============================================================================
@@ -351,7 +353,6 @@ def bool_permutations(n):
 
 class TruthTable(prettytable.Table):
     def __init__(self, expr):
-        expr = parse(expr)
         names = expr.get_names()
         header = names + [str(expr)]
         super(TruthTable, self).__init__(header)
@@ -364,6 +365,19 @@ class TruthTable(prettytable.Table):
             value = expr.evaluate(variables)
             self.append(perm + [value])
             self.values.append(value)
+
+class TooManyVariablesError(Exception):
+    pass
+
+def truth_table(expr):
+    expr = parse(expr)
+    MAX_VARIABLES = 4
+    num_variables = len(expr.get_names())
+    if num_variables > MAX_VARIABLES:
+        raise TooManyVariablesError(
+            '%s variables in expression, maximum of %d allowed'
+                % (num_variables, MAX_VARIABLES))
+    return TruthTable(expr)
 
 # =============================================================================
 # Simplifier
@@ -505,21 +519,36 @@ def simplification_steps(expr):
 # Sample REPL
 # =============================================================================
 
-if __name__ == '__main__':
-    while 1:
+def repl(expr=None):
+    if expr is None:
         expr = raw_input('Enter an expression: ')
-        print
 
+    print
+
+    try:
+        expr = parse(expr)
+    except Exception as e:
+        print 'Error:', e
+    else:
         try:
-            expr = parse(expr)
-        except Exception as e:
-            print 'Error:', e
+            tt = truth_table(expr)
+        except TooManyVariablesError as e:
+            print 'Cannot generate truth table:', e
+            print
         else:
             print 'Truth table:'
-            print TruthTable(expr)
-            print 'Simplification steps:'
-            for n, simple in enumerate(simplification_steps(expr), 1):
-                print n, simple
+            print tt
 
-        print '-' * 80
+        print 'Simplification steps:'
+        for n, simple in enumerate(simplification_steps(expr), 1):
+            print n, simple
 
+    print '-' * 80
+
+if __name__ == '__main__':
+    if len(sys.argv) > 1:
+        for expr in sys.argv[1:]:
+            repl(expr)
+
+    while 1:
+        repl()
