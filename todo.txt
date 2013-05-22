@@ -1,6 +1,7 @@
 Todo:
 - gui. D:
 - tests for extra symbols
+- making sure all vars are in map provided by evaluate
 
 FUTURE:
 - parser to accept unicode chars

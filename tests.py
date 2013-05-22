@@ -18,7 +18,7 @@ E = Biconditional
 Np, Nq, Nr, Ns   = N(p), N(q), N(r), N(s)
 Apq, Apqr, Apqrs = A(p, q), A(p, q, r), A(p, q, r, s)
 Opq, Opqr, Opqrs = O(p, q), O(p, q, r), O(p, q, r, s)
-Jpq, Jpqr, Jpqrs = J(p, q), J(p, q, r), J(p, q, r, s)
+Jpq              = J(p, q)
 Dpq              = D(p, q)
 Xpq              = X(p, q)
 Cpq              = C(p, q)
@@ -38,7 +38,6 @@ class TestExpressionMethods(unittest.TestCase):
         self.assertEqual(len(Apqr), 3)
         self.assertEqual(len(Opq), 2)
         self.assertEqual(len(Opqr), 3)
-        self.assertEqual(len(Jpqrs), 4)
         self.assertEqual(len(Epqrs), 4)
 
     def test_stringification(self):
@@ -56,7 +55,6 @@ class TestExpressionMethods(unittest.TestCase):
         self.assertEqual(str(Epq), 'p ↔ q')
         self.assertEqual(str(Apqr), 'p ∧ q ∧ r')
         self.assertEqual(str(Opqr), 'p ∨ q ∨ r')
-        self.assertEqual(str(Jpqr), 'p ⊕ q ⊕ r')
         self.assertEqual(str(Epqr), 'p ↔ q ↔ r')
         self.assertEqual(str(A(Opq, Jpq)), '(p ∨ q) ∧ (p ⊕ q)')
         self.assertEqual(str(A(N(Cpq), Cpq)), '¬(p → q) ∧ (p → q)')
@@ -100,7 +98,6 @@ class TestExpressionMethods(unittest.TestCase):
         self.assertTrue(N(Apq).equivalent(O(Np, Nq)))
         self.assertTrue(Apqr.equivalent(A(r, q, p)))
         self.assertTrue(Opqr.equivalent(O(r, q, p)))
-        self.assertTrue(Jpqr.equivalent(J(r, q, p)))
         self.assertTrue(Epqr.equivalent(E(r, q, p)))
         self.assertTrue(A(Apq, r).equivalent(A(p, A(q, r))))
         self.assertTrue(O(Opq, r).equivalent(O(p, O(q, r))))
@@ -164,14 +161,6 @@ class TestExpressionMethods(unittest.TestCase):
         self.assertEqual(Jpq.evaluate(tf), True)
         self.assertEqual(Jpq.evaluate(ft), True)
         self.assertEqual(Jpq.evaluate(ff), False)
-        self.assertEqual(Jpqr.evaluate(ttt), True)
-        self.assertEqual(Jpqr.evaluate(ttf), False)
-        self.assertEqual(Jpqr.evaluate(tft), False)
-        self.assertEqual(Jpqr.evaluate(tff), True)
-        self.assertEqual(Jpqr.evaluate(ftt), False)
-        self.assertEqual(Jpqr.evaluate(ftf), True)
-        self.assertEqual(Jpqr.evaluate(fft), True)
-        self.assertEqual(Jpqr.evaluate(fff), False)
         # nand
         self.assertEqual(Dpq.evaluate(tt), False)
         self.assertEqual(Dpq.evaluate(tf), True)
@@ -259,7 +248,7 @@ class TestBinaryOperations(unittest.TestCase):
         self.assertIs(Dpq[1], q)
 
     def test_iter(self):
-        exprs = [Apq, Jpqr, And(Xpq, Jpqr), And(p, q, r, s, Var('a'))]
+        exprs = [Apq, Opqr, And(Xpq, Opqr), And(p, q, r, s, Var('a'))]
         for expr in exprs:
             terms = []
             for term in expr:
@@ -341,11 +330,9 @@ class TestParser(unittest.TestCase):
         self.assertTrue(parse('p <-> q').identical(Epq))
         self.assertTrue(parse('p ^ q ^ r').identical(Apqr))
         self.assertTrue(parse('p v q v r').identical(Opqr))
-        self.assertTrue(parse('p XOR q XOR r').identical(Jpqr))
         self.assertTrue(parse('p <-> q <-> r').identical(Epqr))
         self.assertTrue(parse('p ^ q ^ r ^ s').identical(Apqrs))
         self.assertTrue(parse('p v q v r v s').identical(Opqrs))
-        self.assertTrue(parse('p XOR q XOR r XOR s').identical(Jpqrs))
         self.assertTrue(parse('p <-> q <-> r <-> s').identical(Epqrs))
 
     def test_names(self):
@@ -425,8 +412,8 @@ class TestParser(unittest.TestCase):
         self.assertTrue(parse('p -> q <-> r').identical(E(C(p, q), r)))
         self.assertTrue(parse('p <-> q -> r').identical(E(p, C(q, r))))
         self.assertTrue(parse('p -> q <-> r -> s').identical(E(Cpq, C(r, s))))
-        self.assertTrue(parse('p -> q <-> r XOR s XOR p -> s').identical(
-            E(C(p, q), C(J(r, s, p), s))))
+        self.assertTrue(parse('p -> q <-> r OR s OR p -> s').identical(
+            E(C(p, q), C(O(r, s, p), s))))
         self.assertTrue(parse('p v q <-> q ^ r <-> s v r v q')
                              .identical(E(O(p, q), A(q, r), O(s, r, q))))
         self.assertTrue(parse('p <-> q ^ r <-> s v r -> r')
@@ -461,12 +448,12 @@ class TestParser(unittest.TestCase):
 
     def test_ridiculous(self):
         self.assertTrue(parse(
-            'p v q v r -> (p <-> r) xor q xor (r ^ (r|p and s)) <-> ~(s v r -> (s <-> r))')
+            'p v q v r -> (p <-> r) or q or (r ^ (r|p and s)) <-> ~(s v r -> (s <-> r))')
             .identical(
                 E(
                   C(
                     O(p, q, r),
-                    J(
+                    O(
                       E(p, r),
                       q,
                       A(
