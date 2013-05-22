@@ -16,8 +16,10 @@ def tokenize(expr):
 
 def isvar(token):
     if token is None:
-        return None
-    return var_re.match(token)
+        return False
+    if var_re.match(token):
+        return True
+    return False
 
 def expected(expected, saw=None):
     saw = '`%s`' % saw if saw else 'EOE'
@@ -330,7 +332,7 @@ Conditional = operation('Conditional', lambda p, q: not p or q, u'\u2192',
                         '->', '-->', '=>', '==>', precedence=2)
 
 Biconditional = operation('Biconditional', lambda p, q: p is q, u'\u2194',
-                          '<->', '<-->', '<=>', '<==>', '=', '==', 'eq', 'NXOR',
+                          '<->', '<-->', '<=>', '<==>', '=', 'eq', 'XNOR',
                           associative=True, precedence=3)
 
 # =============================================================================
@@ -353,6 +355,7 @@ def bool_permutations(n):
 
 class TruthTable(prettytable.Table):
     def __init__(self, expr):
+        expr = parse(expr)
         names = expr.get_names()
         header = names + [str(expr)]
         super(TruthTable, self).__init__(header)
@@ -380,142 +383,6 @@ def truth_table(expr):
     return TruthTable(expr)
 
 # =============================================================================
-# Simplifier
-# =============================================================================
-
-def unconditionals(expr):
-    if isinstance(expr, And):
-        for term in expr:
-            if term is F:
-                return F
-        if T not in expr:
-            return expr
-        terms = list(expr.terms)
-        while T in terms:
-            terms.remove(T)
-        if len(terms) == 0:
-            return T
-        if len(terms) == 1:
-            return terms[0]
-        return And(*terms)
-    if isinstance(expr, Or):
-        for term in expr:
-            if term is T:
-                return T
-        if F not in expr:
-            return expr
-        terms = list(expr.terms)
-        while F in terms:
-            terms.remove(F)
-        if len(terms) == 0:
-            return F
-        if len(terms) == 1:
-            return terms[0]
-        return Or(*terms)
-    return expr
-
-def negate_unconditional(expr):
-    if isinstance(expr, Not):
-        if expr.term is T:
-            return F
-        if expr.term is F:
-            return T
-        return expr
-    return expr
-
-def double_negative(expr):
-    if isinstance(expr, Not) and \
-       isinstance(expr.term, Not):
-        return expr.term.term
-    return expr
-
-def implication(expr):
-    if isinstance(expr, Conditional):
-        return Or(Not(expr[0]), expr[1])
-    return expr
-
-def double_implication(expr):
-    if isinstance(expr, Biconditional):
-        if len(expr) == 2:
-            return And(Conditional(expr[0], expr[1]),
-                       Conditional(expr[1], expr[0]))
-        terms = list(expr.terms)
-        simple = Biconditional(terms.pop(0), terms.pop(0))
-        while terms:
-            simple = Biconditional(simple, terms.pop(0))
-        return simple
-    return expr
-
-def nand_nor(expr):
-    if isinstance(expr, Nand):
-        return Not(And(*expr.terms))
-    if isinstance(expr, Nor):
-        return Not(Or(*expr.terms))
-    return expr
-
-def not_expand(expr):
-    if isinstance(expr, Not) and \
-       isinstance(expr.term, (And, Or)):
-        terms = list(expr.term.terms)
-        terms = map(Not, terms)
-        return type(expr.term)(*terms)
-    return expr
-
-def distributive(expr):
-    if not isinstance(expr, (And, Or)):
-        return expr
-    # investigate this..
-    if len(expr) > 2:
-        return expr
-    term1, term2 = expr[0], expr[1]
-    op_outer = type(expr)
-    return expr
-
-rules = [
-    unconditionals,
-    negate_unconditional,
-    double_negative,
-    implication,
-    double_implication,
-    nand_nor,
-    not_expand,
-    distributive
-]
-
-def simplify(expr):
-    for rule in rules:
-        new = rule(expr)
-        if not new.identical(expr):
-            return new
-
-    if not isinstance(expr, Operation):
-        return expr
-
-    if isinstance(expr, Not):
-        term = simplify(expr.term)
-        new = Not(term)
-        if not new.identical(expr):
-            return new
-    else:
-        terms = list(expr.terms)
-        for i, term in enumerate(terms):
-            terms[i] = simplify(term)
-        new = type(expr)(*terms)
-        if not new.identical(expr):
-            return new
-
-    return expr
-
-def simplification_steps(expr):
-    expr = parse(expr)
-
-    simpler = simplify(expr)
-    if simpler is not expr:
-        return [expr] + simplification_steps(simpler)
-
-    return [expr]
-
-# =============================================================================
 # Sample REPL
 # =============================================================================
 
@@ -538,10 +405,6 @@ def repl(expr=None):
         else:
             print 'Truth table:'
             print tt
-
-        print 'Simplification steps:'
-        for n, simple in enumerate(simplification_steps(expr), 1):
-            print n, simple
 
     print '-' * 80
 
