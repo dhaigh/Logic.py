@@ -3,6 +3,7 @@
 import prettytable
 import re
 import sys
+from functools import reduce
 
 # =============================================================================
 # Parser
@@ -101,7 +102,7 @@ class Parser(object):
             return Var(token)
 
         # Not character
-        if token == '~' or token == u'\u00ac'.encode('utf-8'):
+        if token in ('~', '!') or token == u'\u00ac':
             return Not(self.next_term())
 
         # open bracket
@@ -249,7 +250,7 @@ class Not(Operation):
         return 1
 
     def __str__(self):
-        return '\xc2\xac' + wrap(self.term, Not)
+        return str(b'\xc2\xac', 'utf-8') + wrap(self.term, Not)
 
     def get_names(self):
         return self.term.get_names()
@@ -301,7 +302,6 @@ def set_operation(symbol, operation):
 def operation(name, rule, unicode_symbol, *symbols, **kwargs):
     two_args = kwargs.get('two_args', False)
     precedence = kwargs.get('precedence', 1)
-    unicode_symbol = unicode_symbol.encode('utf-8')
 
     class BinaryOp(BinaryOperation):
         def __init__(self, *terms):
@@ -367,13 +367,13 @@ def conditional(p, q):
 def biconditional(*values):
     return reduce(lambda p, q: p == q, values)
 
-And = operation('And', and_, u'\u2227', 'AND', '^')
+And = operation('And', and_, u'\u2227', 'AND', '^', '&', '&&',)
 
-Or = operation('Or', or_, u'\u2228', 'OR', 'v')
+Or = operation('Or', or_, u'\u2228', 'OR', 'v', '|', '||')
 
 Xor = operation('Xor', xor, u'\u2295', 'XOR', two_args=True)
 
-Nand = operation('Nand', nand, u'\u2191', 'NAND', '|')
+Nand = operation('Nand', nand, u'\u2191', 'NAND')
 
 Nor = operation('Nor', nor, u'\u2193', 'NOR')
 
@@ -439,25 +439,25 @@ def truth_table(expr):
 
 def repl(expr=None):
     if expr is None:
-        expr = raw_input('Enter an expression: ')
+        expr = input('Enter an expression: ')
 
-    print
+    print()
 
     try:
         expr = parse(expr)
     except Exception as e:
-        print 'Error:', e
+        print('Error:', e)
     else:
         try:
             tt = truth_table(expr)
         except TooManyVariablesError as e:
-            print 'Cannot generate truth table:', e
-            print
+            print('Cannot generate truth table:', e)
+            print()
         else:
-            print 'Truth table:'
-            print tt
+            print('Truth table:')
+            print(tt)
 
-    print '-' * 80
+    print('-' * 80)
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
